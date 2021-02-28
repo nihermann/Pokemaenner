@@ -5,6 +5,7 @@ class Discriminator(tf.keras.Model):
         super(Discriminator, self).__init__()
         self.layer_list = []
 
+    # @tf.function
     def call(self, x, training=False):
         for layer in self.layer_list:
             x = layer(x, training=training)
@@ -16,6 +17,7 @@ class Generator(tf.keras.Model):
         super(Generator, self).__init__()
         self.layer_list = []
 
+    # @tf.function
     def call(self, x, training=False):
         for layer in self.layer_list:
             x = layer(x, training=training)
