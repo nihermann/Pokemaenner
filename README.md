@@ -1,2 +1,2 @@
-# Pokemaenner
+# Pokemänner
 Super coole neue Pokemänner
