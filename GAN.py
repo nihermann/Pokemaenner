@@ -1,4 +1,6 @@
 import tensorflow as tf
+from tensorflow.keras import layers
+
 
 class Discriminator(tf.keras.Model):
     def __init__(self):
@@ -13,8 +15,10 @@ class Discriminator(tf.keras.Model):
 
 
 class Generator(tf.keras.Model):
-    def __init__(self):
+    def __init__(self, latentspace):
         super(Generator, self).__init__()
+        # TODO make latentspace readonly
+        self.latentspace = latentspace
         self.layer_list = []
 
     # @tf.function
