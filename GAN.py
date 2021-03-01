@@ -3,7 +3,7 @@ from tensorflow.keras import layers
 
 
 class Discriminator(tf.keras.Model):
-    def __init__(self):
+    def __init__(self, input_shape):
         super(Discriminator, self).__init__()
         self.layer_list = []
 
@@ -17,9 +17,16 @@ class Discriminator(tf.keras.Model):
 class Generator(tf.keras.Model):
     def __init__(self, latentspace):
         super(Generator, self).__init__()
-        # TODO make latentspace readonly
-        self.latentspace = latentspace
+        self._latentspace = latentspace
         self.layer_list = []
+
+    @property
+    def latentspace(self):
+        """
+        Makes the latentspace (input space) read-only.
+        :return: generators latentspace
+        """
+        return self._latentspace
 
     # @tf.function
     def call(self, x, training=False):
