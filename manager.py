@@ -2,26 +2,41 @@ import tensorflow as tf
 import GAN
 
 
-class Manager:
+class GAN_Manager:
     """
     The Manager should handle the whole trainings process for a GAN.
     """
 
     def __init__(self, kwargs, generator_kwargs, discriminator_kwargs):
-        self.generator = GAN.Generator(generator_kwargs)
-        self.discriminator = GAN.Discriminator(discriminator_kwargs)
+        """
+        The Manager controls the training of our GAN.
+        :param kwargs:
+        :param generator_kwargs:
+        :param discriminator_kwargs:
+        """
+        self.generator = GAN.Generator(**generator_kwargs)
+        self.discriminator = GAN.Discriminator(**discriminator_kwargs)
 
         self.batch_size = kwargs["batch_size"]
 
         self.loss_function = kwargs["loss"]
 
-    def get_noice(self, batch_size=None, mu=0.5, sd=0.5):
+    def get_noise(self, batch_size=None, mu=0.5, sd=0.5):
         """
         Creates noise of predefined shape with specified batch size.
         :param batch_size: int - batch size, if None the default batch_size of the manager will be used.
+        :param mu: float - mu of the normal distribution.
+        :param sd: float - standard deviation of the normal distribution.
         :return: Noise of shape (batch_size, XXX)
         """
-        return tf.random.normal(shape=(batch_size, self.generator.latentspace), mean=mu, stddev=sd)
+        return tf.random.normal(
+            shape=(
+                self.batch_size if batch_size is None else batch_size,
+                self.generator.latentspace
+            ),
+            mean=mu,
+            stddev=sd
+        )
 
     def generator_loss(self, discriminators_prediction):
         """
