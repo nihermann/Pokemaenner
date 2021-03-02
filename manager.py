@@ -2,7 +2,7 @@ import tensorflow as tf
 import GAN
 
 
-class GAN_Manager:
+class GANManager:
     """
     The Manager handles the whole training process for a GAN.
     """
@@ -19,7 +19,9 @@ class GAN_Manager:
 
         self.batch_size = kwargs["batch_size"]
 
+        # make loss and optimizers as model params?
         self.loss_function = kwargs["loss"]
+        self.optimizer = kwargs["optimizer"]
 
     def get_noise(self, batch_size=None, mu=0.5, sd=0.5):
         """
@@ -66,14 +68,69 @@ class GAN_Manager:
         )
         return loss_for_real_images + loss_for_generated_images
 
-    def forward_step(self, real_images):
-        """ # TODO write docstring
+    def forward_step(self, real_images, partition, proportion_real=0.5):
+        """
         Compute one forward step
         :param real_images: Input one batch of real images to train the Discriminator
-        :return: Generator loss, Discriminator loss
+        :param partition: tuple(n_g, n_d) - how often will each component be trained before switching.
+        :param  proportion_real: float[0:1] - how much percent of the should be replaced by generated images?
+        :return: float - Generator loss, float - Discriminator loss
         """
-        # TODO implement forward_step
-        pass
+        generator_losses = [self.forward_step_generator() for _ in range(partition[0])]
+        # TODO solve real_images problem as they stay the same for n_d iterations
+        discriminator_losses = [self.forward_step_discriminator(real_images, proportion_real=proportion_real) for _ in
+                                range(partition[1])]
+
+        return tf.reduce_mean(generator_losses), tf.reduce_mean(discriminator_losses)
+
+    def forward_step_generator(self):
+        """
+        Computes one forward step for the generator. We generate images and try to fool the discriminator.
+        :return: float - loss for the generator.
+        """
+        with tf.GradientTape() as tape:
+            # Generate images from noise
+            generated_images = self.generate_pictures(training=True)
+
+            # try to fool the discriminator and assess our success.
+            prediction = self.discriminator(generated_images, training=False)
+            loss = self.generator_loss(discriminators_prediction=prediction)
+
+            # improve generator based on its assessed loss.
+            gradients = tape.gradient(loss, self.generator.trainable_variables)
+            self.optimizer.apply_gradients(zip(gradients, self.generator.trainable_variables))
+
+        return loss
+
+    def forward_step_discriminator(self, real_images, proportion_real=0.5):
+        """
+        Computes one forward step for the discriminator. We want to predict all real images as real and all the generated ones as fakes.
+        :param real_images: tensor - a batch of real images
+        :param proportion_real: float[0:1] - how much percent of the batch should be replaced by generated images?
+        :return: float - loss for the discriminator.
+        """
+        assert 0 <= proportion_real <= 1, "Proportion must be between 0-1"
+
+        with tf.GradientTape() as tape:
+            # generate some images to train the discriminator corresponding to the inverse proportion.
+            generated_images = self.generate_pictures(int((1 - proportion_real) * self.batch_size))
+
+            # take the remaining portion from our real images.
+            take_reals_until = tf.cast(tf.math.ceil(self.batch_size * proportion_real), tf.int32)
+            train_batch = tf.concat((real_images[:take_reals_until], generated_images), axis=0)
+
+            # train the discriminator and assess its performance.
+            predictions = self.discriminator(train_batch, training=True)
+            loss = self.discriminator_loss(
+                real_images_prediction=predictions[:take_reals_until],
+                generated_images_prediction=predictions[:take_reals_until]
+            )
+
+            # improve discriminator based on its assessed loss.
+            gradients = tape.gradient(loss, self.discriminator.trainable_variables)
+            self.optimizer.apply_gradients(zip(gradients, self.discriminator.trainable_variables))
+
+        return loss
 
     def train(self, epochs, print_every=5, save_each=5):
         """ # TODO write docstring
@@ -102,12 +159,17 @@ class GAN_Manager:
         # TODO load only one model?!
         pass
 
-    def get_pictures(self, number):
+    def generate_pictures(self, number=None, save_to="", training=False):
         """
         Returns pictures using the Generator.
         :param number: int - number of pictures.
+        :param save_to: string - if specified, pictures will be saved to the given path.
+        :param training: bool - is the generator in training?
         :return: The above specified number of generated pictures.
         """
-        # TODO maybe save also to path?
         noise = self.get_noise(number)
-        return self.generator(noise)
+        images = self.generator(noise, training=training)
+        if save_to:
+            # TODO implement saving
+            pass
+        return images
