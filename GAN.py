@@ -5,6 +5,7 @@ from tensorflow.keras import layers
 class Discriminator(tf.keras.Model):
     def __init__(self, input_shape):
         super(Discriminator, self).__init__()
+        # todo discriminator architecture.
         self.layer_list = []
 
     # @tf.function
@@ -18,12 +19,13 @@ class Generator(tf.keras.Model):
     def __init__(self, latentspace):
         super(Generator, self).__init__()
         self._latentspace = latentspace
+        # todo generator architecture.
         self.layer_list = []
 
     @property
     def latentspace(self):
         """
-        Makes the latentspace (input space) read-only.
+        Makes the latentspace (input space/dim) read-only.
         :return: generators latentspace
         """
         return self._latentspace
