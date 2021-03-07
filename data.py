@@ -5,8 +5,8 @@ import os
 class DataGenerator:
     """
     class for generating image data and splitting into dataset. The dataset is supposed to be structured like so:
-    - projectfolder:
-        - imagefolder:
+    - Pokemaenner:
+        - images:
             - class_label/s (only one for generative adversial network)
                 xxx.png
     """
