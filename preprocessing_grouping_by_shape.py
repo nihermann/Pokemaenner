@@ -11,18 +11,21 @@ def to_png():
     for folder in os.listdir(image_data_path):
         print(folder)
         for img_path in os.listdir(os.path.join(image_data_path, folder)):
-            if '.jpg' in img_path:
-                img_dir = os.path.join(image_data_path, folder, img_path)
-                img = Image.open(img_dir)
-                img.save(img_dir[:-3] + 'png', "PNG")
-                os.remove(img_dir)
-                print(f"Making {img_path} into PNG")
-            elif '.jpeg' in img_path:
-                img_dir = os.path.join(image_data_path, folder, img_path)
-                img = Image.open(img_dir)
-                img.save(img_dir[:-4] + 'png', "PNG")
-                os.remove(img_dir)
-                print(f"Making {img_path} into PNG")
+            try:
+                if '.jpg' in img_path:
+                    img_dir = os.path.join(image_data_path, folder, img_path)
+                    img = Image.open(img_dir)
+                    img.save(img_dir[:-3] + 'png', "PNG")
+                    os.remove(img_dir)
+                    print(f"Making {img_path} into PNG")
+                elif '.jpeg' in img_path:
+                    img_dir = os.path.join(image_data_path, folder, img_path)
+                    img = Image.open(img_dir)
+                    img.save(img_dir[:-4] + 'png', "PNG")
+                    os.remove(img_dir)
+                    print(f"Making {img_path} into PNG")
+            except:
+                print("Failed", img_dir)
 
 
 def main():
@@ -131,4 +134,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    to_png()

@@ -55,7 +55,7 @@ class GANManager:
             discriminators_prediction
         )
 
-    def discriminator_loss(self, real_images_prediction, generated_images_prediction):
+    def discriminator_loss(self, real_images_prediction=None, generated_images_prediction=None):
         """
         Computes the loss for the Discriminator.
         :param real_images_prediction: Obtained predictions from the Discriminator for the real images.
@@ -66,11 +66,13 @@ class GANManager:
         loss_for_real_images = self.loss_function(
             y_true=tf.ones_like(real_images_prediction),
             y_pred=real_images_prediction
-        )
+        ) if real_images_prediction else 0
+
         loss_for_generated_images = self.loss_function(
             y_true=tf.zeros_like(generated_images_prediction),
             y_pred=generated_images_prediction
-        )
+        ) if generated_images_prediction else 0
+
         return loss_for_real_images + loss_for_generated_images
 
     def forward_step(self, real_images, trainings_frequency=(5, 5), proportion_real=0.5):
@@ -142,6 +144,7 @@ class GANManager:
             trainings_frequency=(5, 5),
             proportion_real=0.5,
             print_every=5,
+            print_verbose=True,
             save_pictures_every=5,
             how_many_pictures_to_save=20,
             save_model_every=5
@@ -154,33 +157,46 @@ class GANManager:
         # how much real images we want to take to get the right proportion given the batch size
         take_reals = tf.cast(
             tf.math.ceil(self.batch_size * proportion_real) * trainings_frequency[1],
-            dtype=tf.int32
+            dtype=tf.int64
         )
 
         generator_losses_accumulator, discriminator_losses_accumulator = [], []
         try:  # Like this we will have to opportunity to end training early and save the model.
             for epoch in range(epochs):
                 count, epoch_acc_g, epoch_acc_d = 0, [], []
+                print("|T| ", end="")
                 while count < samples_per_epoch:
                     print("-", end="")
-                    count += samples_per_epoch
+                    count += self.batch_size
 
-                    data = self.data.trainings_data.take(take_reals)
-                    generator_loss, discriminator_loss = self.forward_step(data, trainings_frequency, proportion_real)
+                    images, _ = self.data.trainings_data.take(take_reals)
+                    generator_loss, discriminator_loss = self.forward_step(images, trainings_frequency, proportion_real)
 
                     epoch_acc_g.append(generator_loss)
                     epoch_acc_d.append(discriminator_loss)
 
                 generator_losses_accumulator.append(tf.reduce_mean(epoch_acc_g))
                 discriminator_losses_accumulator.append(tf.reduce_mean(epoch_acc_d))
-
+                print("> |V| ", end="")
+                real_accuracy, real_loss, fake_accuracy, fake_loss = self.test_discriminator()
 
                 if epoch % print_every == 0:
+                    if print_verbose:
+                        test_loss = f"Mean D-Loss for real images: {real_loss}, Mean D-Loss for generated images: {fake_loss} "
+                        test_accuracy = f"Mean D-Accuracy for real images: {real_accuracy}, Mean D-Accuracy for " \
+                                        f"generated images: {fake_accuracy} || "
+                    else:
+                        test_loss = f"Mean D-Loss: {(real_loss+fake_loss)/2} "
+                        test_accuracy = f"Mean D-Accuracy: {(real_accuracy+fake_accuracy)/2} ||"
+
                     print(
-                        f"> || Mean Generator Loss {generator_losses_accumulator[-1]},",
-                        f" Mean Discriminator Loss {discriminator_losses_accumulator[-1]},",
-                        f" Mean Test Discriminator Accuracy {0} ||"
+                        f">\n|D| Mean G-Loss: {generator_losses_accumulator[-1]},",
+                        f"Mean D-Loss: {discriminator_losses_accumulator[-1]},",
+                        test_loss,
+                        test_accuracy
                     )
+                    if epoch % save_pictures_every == 0:
+                        self.generate_and_save_images(how_many_pictures_to_save, "./pictures/", str(epoch)+"_")
         # ----------- Early Abortion ------------
         except KeyboardInterrupt:
             if input("Manual abortion.. to save the current model answer '1'") == 1:
@@ -190,17 +206,47 @@ class GANManager:
                     print("Saving the Model was unsuccessful with the exception", type(e), e)
         # ---------------------------------------
 
-
-    def test_discriminator(self, test_fakes=True):
+    def test_discriminator(self):
+        """
+        Tests the discriminator on the validation dataset with the current model for Accuracy and Loss.
+        :return: tensors - mean_real_accuracy, mean_real_loss, mean_fake_accuracy, mean_fake_loss
+        """
         real_accuracy_accumulator, fake_accuracy_accumulator = [], []
-        for data in self.data:
-            prediction_real = self.discriminator(data, training=False)
-            if test_fakes:
-                generated_images = self.generate_images()
-                prediction_fake = self.discriminator(generated_images)
+        real_loss_accumulator, fake_loss_accumulator = [], []
+        for images, _ in self.data.validation_data:
+            print("-", end="")
+
+            # Assess loss and accuracy for the real images.
+            prediction_real = self.discriminator(images, training=False)
+            real_accuracy_accumulator.append(
+                self.calculate_accuracy(prediction_real, real_images=True)
+            )
+            real_loss_accumulator.append(
+                self.discriminator_loss(real_images_prediction=prediction_real)
+            )
+
+            # If specified assess loss and accuracy with fake images as well
+            generated_images = self.generate_images()
+            prediction_fake = self.discriminator(generated_images)
+            fake_accuracy_accumulator.append(
+                self.calculate_accuracy(prediction_fake, real_images=False)
+            )
+            fake_loss_accumulator.append(
+                self.discriminator_loss(generated_images_prediction=prediction_fake)
+            )
+
+        # Calculate all means
+        mean_real_accuracy = tf.reduce_mean(real_accuracy_accumulator)
+        mean_real_loss = tf.reduce_mean(real_loss_accumulator)
+
+        mean_fake_accuracy = tf.reduce_mean(fake_accuracy_accumulator)
+        mean_fake_loss = tf.reduce_mean(fake_loss_accumulator)
+
+        return mean_real_accuracy, mean_real_loss, mean_fake_accuracy, mean_fake_loss
 
     def calculate_accuracy(self, prediction, real_images=True):
         how_it_should_be = tf.ones_like(prediction) if real_images else tf.zeros_like(prediction)
+        return "not yet available"
 
 
     def save_model(self):
