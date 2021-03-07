@@ -2,6 +2,27 @@ import os
 import shutil
 import pandas as pd
 import re
+from PIL import Image
+
+def to_png():
+    current = os.getcwd()
+    image_data_path = os.path.join(current, "images")
+    # translating jpg to png
+    for folder in os.listdir(image_data_path):
+        print(folder)
+        for img_path in os.listdir(os.path.join(image_data_path, folder)):
+            if '.jpg' in img_path:
+                img_dir = os.path.join(image_data_path, folder, img_path)
+                img = Image.open(img_dir)
+                img.save(img_dir[:-3] + 'png', "PNG")
+                os.remove(img_dir)
+                print(f"Making {img_path} into PNG")
+            elif '.jpeg' in img_path:
+                img_dir = os.path.join(image_data_path, folder, img_path)
+                img = Image.open(img_dir)
+                img.save(img_dir[:-4] + 'png', "PNG")
+                os.remove(img_dir)
+                print(f"Making {img_path} into PNG")
 
 
 def main():
@@ -106,7 +127,7 @@ def main():
 
     # removes the directory where the files were
     if len(images_names) == 0:
-        os.rmdir(os.path.join(path_image_data, "pokemaenner_images"))
+        os.rmdir(images_names)
 
 
 if __name__ == "__main__":
