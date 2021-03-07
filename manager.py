@@ -1,6 +1,7 @@
 import tensorflow as tf
 import GAN
 import utils
+from data import DataGenerator
 
 
 class GANManager:
@@ -8,23 +9,24 @@ class GANManager:
     The Manager handles the whole training process for a GAN.
     """
 
-    def __init__(self, kwargs, generator_kwargs, discriminator_kwargs):
+    def __init__(self, kwargs, generator, discriminator, data):
         """
         The Manager controls the training of our GAN.
         :param kwargs:
-        :param generator_kwargs:
-        :param discriminator_kwargs:
+        :param generator: a generative model.
+        :param discriminator: a discriminator model.
+        :param data: DataGenerator class containing all data.
         """
-        self.generator = GAN.Generator(**generator_kwargs)
-        self.discriminator = GAN.Discriminator(**discriminator_kwargs)
+        self.generator = generator
+        self.discriminator = discriminator
+        self.data = data
 
-        self.batch_size = kwargs["batch_size"]
 
         # make loss and optimizers as model params?
+        self.batch_size = kwargs["batch_size"]
         self.loss_function = kwargs["loss"]
         self.optimizer = kwargs["optimizer"]
 
-        self.data = tf.ones((128, 32, 32, 3))  # todo add data
 
     def get_noise(self, batch_size=None, mu=0.5, sd=0.5):
         """
@@ -71,11 +73,11 @@ class GANManager:
         )
         return loss_for_real_images + loss_for_generated_images
 
-    def forward_step(self, real_images, trainings_frequency, proportion_real=0.5):
+    def forward_step(self, real_images, trainings_frequency=(5, 5), proportion_real=0.5):
         """
         Compute one forward step
         :param real_images: Input one batch of real images to train the Discriminator
-        :param partition: tuple(n_g, n_d) - how often will each component be trained before switching.
+        :param trainings_frequency: tuple(n_g, n_d) - how often will each component be trained before switching.
         :param  proportion_real: float[0:1] - how much percent of the should be replaced by generated images?
         :return: float - Generator loss, float - Discriminator loss
         """
@@ -122,7 +124,10 @@ class GANManager:
 
             # train the discriminator and assess its performance.
             predictions = self.discriminator(train_batch, training=True)
-            loss = self.discriminator_loss(real_images_prediction=predictions, generated_images_prediction=predictions)
+            loss = self.discriminator_loss(
+                real_images_prediction=predictions[:len(real_images)],
+                generated_images_prediction=predictions[len(real_images):]
+            )
 
             # improve discriminator based on its assessed loss.
             gradients = tape.gradient(loss, self.discriminator.trainable_variables)
@@ -147,28 +152,55 @@ class GANManager:
         assert 0 <= proportion_real <= 1, "Proportion must be between 0-1"
 
         # how much real images we want to take to get the right proportion given the batch size
-        take_reals = tf.cast(tf.math.ceil(self.batch_size * proportion_real) * trainings_frequency[1], tf.int32)
+        take_reals = tf.cast(
+            tf.math.ceil(self.batch_size * proportion_real) * trainings_frequency[1],
+            dtype=tf.int32
+        )
 
         generator_losses_accumulator, discriminator_losses_accumulator = [], []
         try:  # Like this we will have to opportunity to end training early and save the model.
             for epoch in range(epochs):
-                count = 0
+                count, epoch_acc_g, epoch_acc_d = 0, [], []
                 while count < samples_per_epoch:
+                    print("-", end="")
                     count += samples_per_epoch
 
-                    data = self.data.take(take_reals)
+                    data = self.data.trainings_data.take(take_reals)
                     generator_loss, discriminator_loss = self.forward_step(data, trainings_frequency, proportion_real)
 
-                    generator_losses_accumulator.append(generator_loss)
-                    discriminator_losses_accumulator.append(discriminator_loss)
+                    epoch_acc_g.append(generator_loss)
+                    epoch_acc_d.append(discriminator_loss)
+
+                generator_losses_accumulator.append(tf.reduce_mean(epoch_acc_g))
+                discriminator_losses_accumulator.append(tf.reduce_mean(epoch_acc_d))
+
+
+                if epoch % print_every == 0:
+                    print(
+                        f"> || Mean Generator Loss {generator_losses_accumulator[-1]},",
+                        f" Mean Discriminator Loss {discriminator_losses_accumulator[-1]},",
+                        f" Mean Test Discriminator Accuracy {0} ||"
+                    )
         # ----------- Early Abortion ------------
         except KeyboardInterrupt:
-            if "1" == input("Manual abortion.. to save the current model answer '1'"):
+            if input("Manual abortion.. to save the current model answer '1'") == 1:
                 try:
                     self.save_model()
                 except Exception as e:
                     print("Saving the Model was unsuccessful with the exception", type(e), e)
         # ---------------------------------------
+
+
+    def test_discriminator(self, test_fakes=True):
+        real_accuracy_accumulator, fake_accuracy_accumulator = [], []
+        for data in self.data:
+            prediction_real = self.discriminator(data, training=False)
+            if test_fakes:
+                generated_images = self.generate_images()
+                prediction_fake = self.discriminator(generated_images)
+
+    def calculate_accuracy(self, prediction, real_images=True):
+        how_it_should_be = tf.ones_like(prediction) if real_images else tf.zeros_like(prediction)
 
 
     def save_model(self):
@@ -189,7 +221,7 @@ class GANManager:
     def generate_images(self, number=None, training=False):
         """
         Returns pictures using the Generator.
-        :param number: int - number of pictures.
+        :param number: int - number of pictures. If not specified, batch size will be used.
         :param training: bool - is the generator in training?
         :return: The above specified number of generated pictures.
         """
