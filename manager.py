@@ -183,12 +183,12 @@ class GANManager:
 
                 if epoch % print_every == 0:
                     if print_verbose:
-                        test_loss = f"Mean D-Loss for real images: {real_loss}, Mean D-Loss for generated images: {fake_loss} "
-                        test_accuracy = f"Mean D-Accuracy for real images: {real_accuracy}, Mean D-Accuracy for " \
+                        test_loss = f"|| Mean Validation D-Loss for real images: {real_loss}, Mean Validation D-Loss for generated images: {fake_loss} "
+                        test_accuracy = f"Mean Validation D-Accuracy for real images: {real_accuracy}, Mean Validation D-Accuracy for " \
                                         f"generated images: {fake_accuracy} || "
                     else:
-                        test_loss = f"Mean D-Loss: {(real_loss+fake_loss)/2} "
-                        test_accuracy = f"Mean D-Accuracy: {(real_accuracy+fake_accuracy)/2} ||"
+                        test_loss = f"|| Mean Validation D-Loss: {(real_loss+fake_loss)/2} "
+                        test_accuracy = f"Mean Validation D-Accuracy: {(real_accuracy+fake_accuracy)/2} ||"
 
                     print(
                         f">\n|D| Mean G-Loss: {generator_losses_accumulator[-1]},",

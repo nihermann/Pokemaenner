@@ -13,18 +13,18 @@ Original file is located at
 # !git status
 ###################################################################################
 
+# from google.colab import drive
+# drive.mount('/content/drive')
+
 #@title # Using Gan to create new Pokemon
 import tensorflow as tf
-import os
 from manager import GANManager
 from data import DataGenerator
 import GAN
-os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
-
 
 #@title ## Data Settings
 image_shape = (256, 256) #@param
-image_path = "images" #@param {type:"string"}
+image_path = "./images/" #@param {type:"string"}
 batch_size = 32 #@param {type:"integer"}
 validation_split = 0.1 #@param {type:"slider", min:0, max:0.5, step:0.1}
 shuffle = True #@param {type:"boolean"}
@@ -39,7 +39,7 @@ data = DataGenerator(
 )
 
 #@title Generator Arguments
-latentspace = 1000 #@param {type:"slider", min:2, max:20, step:1}
+latentspace = 250 #@param {type:"slider", min:2, max:1000, step:1}
 
 
 generator = GAN.Generator(
@@ -54,7 +54,7 @@ discriminator = GAN.Discriminator(
 #@title ## Hyperparameters
 
 
-loss_function = "Mean Squared Error" #@param ["Binary Cross Entropy", "Mean Squared Error"]
+loss_function = "Binary Cross Entropy" #@param ["Binary Cross Entropy", "Mean Squared Error"]
 optimizer = "Adam" #@param ["Adam", "RMSprop", "SGD"]
 learning_rate = 0.001 #@param {type:"number"}
 
@@ -86,5 +86,24 @@ manager = GANManager(
     data=data
 )
 
-manager.train(1000, samples_per_epoch=10000, print_every=5, save_pictures_every=4, how_many_pictures_to_save=10)
+#@title # Training Parameters
+epochs = 100 #@param {type:"integer"}
+samples_per_epoch = 10000 #@param {type:"integer"}
+trainings_frequency =  (5, 5)#@param {type:"raw"}
+print_every =  1#@param {type:"integer"}
+print_verbose = True #@param {type:"boolean"}
+save_pictures_every = 4 #@param {type:"integer"}
+how_many_pictures_to_save = 10 #@param {type:"integer"}
+save_model_every = 0 #@param {type:"integer"}
 
+
+manager.train(
+    epochs=epochs,
+    samples_per_epoch=samples_per_epoch,
+    trainings_frequency=trainings_frequency,
+    print_every=print_every,
+    print_verbose=print_verbose,
+    save_pictures_every=save_pictures_every,
+    how_many_pictures_to_save=how_many_pictures_to_save,
+    save_model_every=save_model_every
+)

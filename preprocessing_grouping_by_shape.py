@@ -28,6 +28,24 @@ def to_png():
                 print("Failed", img_dir)
 
 
+def to_RGBA():
+    # os.chdir('..')
+    current = os.getcwd()
+    image_data_path = os.path.join(current, "images")
+    # translating jpg to png
+    for folder in os.listdir(image_data_path):
+        for img_path in os.listdir(os.path.join(image_data_path, folder)):
+            try:
+                complete_path = os.path.join(image_data_path, folder, img_path)
+                if 'png' in img_path:
+                    img = Image.open(complete_path)
+                    if img.mode != "RGBA":
+                        print(f"Making {img_path} to RGBA")
+                        img2 = img.convert("RGBA")
+                        img2.save(complete_path, "PNG")
+            except:
+                print("Failed", img_path)
+
 def main():
     # get the paths for the images, shapes and stats data
     path_shapes = os.path.join(os.getcwd(), "csvs", "shape_by_csv.csv")
@@ -134,4 +152,4 @@ def main():
 
 
 if __name__ == "__main__":
-    to_png()
+    to_RGBA()
