@@ -48,7 +48,7 @@ class Generator(tf.keras.Model):
         super(Generator, self).__init__()
         self._latentspace = latentspace
         self.layer_list = [
-            layers.Dense(8 * 8 * 64, use_bias=False, input_shape=(None, latentspace)),
+            layers.Dense(8 * 8 * 128, use_bias=False, input_shape=(None, latentspace)),
             layers.Activation('relu'),
             layers.Reshape((8, 8, 128)),  # 8x8
 
@@ -72,7 +72,7 @@ class Generator(tf.keras.Model):
             layers.BatchNormalization(),
             layers.Activation('relu'),
 
-            layers.Conv2D(1, kernel_size=1, padding="same"),
+            layers.Conv2D(4, kernel_size=1, padding="same"),
             layers.Activation('sigmoid')
 
         ]

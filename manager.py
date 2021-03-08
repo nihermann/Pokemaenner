@@ -66,12 +66,12 @@ class GANManager:
         loss_for_real_images = self.loss_function(
             y_true=tf.ones_like(real_images_prediction),
             y_pred=real_images_prediction
-        ) if real_images_prediction else 0
+        ) if real_images_prediction is not None else 0
 
         loss_for_generated_images = self.loss_function(
             y_true=tf.zeros_like(generated_images_prediction),
             y_pred=generated_images_prediction
-        ) if generated_images_prediction else 0
+        ) if generated_images_prediction is not None else 0
 
         return loss_for_real_images + loss_for_generated_images
 
@@ -153,12 +153,12 @@ class GANManager:
         # TODO eventually sample or save some generated pictures. Maybe sampled ones with download link?
 
         assert 0 <= proportion_real <= 1, "Proportion must be between 0-1"
-
+        proportion_real = 0
         # how much real images we want to take to get the right proportion given the batch size
-        take_reals = tf.cast(
-            tf.math.ceil(self.batch_size * proportion_real) * trainings_frequency[1],
-            dtype=tf.int64
-        )
+        # take_reals = tf.cast(
+        #     tf.math.ceil(self.batch_size * proportion_real) * trainings_frequency[1],
+        #     dtype=tf.int64
+        # )
 
         generator_losses_accumulator, discriminator_losses_accumulator = [], []
         try:  # Like this we will have to opportunity to end training early and save the model.
@@ -166,10 +166,11 @@ class GANManager:
                 count, epoch_acc_g, epoch_acc_d = 0, [], []
                 print("|T| ", end="")
                 while count < samples_per_epoch:
+                # for images, _ in self.data.trainings_data.take(trainings_frequency[1]):
                     print("-", end="")
-                    count += self.batch_size
+                    count += self.batch_size*trainings_frequency[1]
 
-                    images, _ = self.data.trainings_data.take(take_reals)
+                    images = [img for img, _ in self.data.trainings_data.take(trainings_frequency[1])]
                     generator_loss, discriminator_loss = self.forward_step(images, trainings_frequency, proportion_real)
 
                     epoch_acc_g.append(generator_loss)
@@ -222,7 +223,7 @@ class GANManager:
                 self.calculate_accuracy(prediction_real, real_images=True)
             )
             real_loss_accumulator.append(
-                self.discriminator_loss(real_images_prediction=prediction_real)
+                tf.reduce_mean(self.discriminator_loss(real_images_prediction=prediction_real))
             )
 
             # If specified assess loss and accuracy with fake images as well
@@ -232,7 +233,7 @@ class GANManager:
                 self.calculate_accuracy(prediction_fake, real_images=False)
             )
             fake_loss_accumulator.append(
-                self.discriminator_loss(generated_images_prediction=prediction_fake)
+                tf.reduce_mean(self.discriminator_loss(generated_images_prediction=prediction_fake))
             )
 
         # Calculate all means
@@ -246,7 +247,7 @@ class GANManager:
 
     def calculate_accuracy(self, prediction, real_images=True):
         how_it_should_be = tf.ones_like(prediction) if real_images else tf.zeros_like(prediction)
-        return "not yet available"
+        return 0
 
 
     def save_model(self):
