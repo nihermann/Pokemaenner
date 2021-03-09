@@ -35,7 +35,7 @@ data = DataGenerator(
     img_height=image_shape[0],
     img_width=image_shape[1],
     validation_split=validation_split,
-    shuffle=shuffle
+    # shuffle=shuffle
 )
 
 # @title Generator Arguments
