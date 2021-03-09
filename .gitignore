@@ -7,7 +7,7 @@ __pycache__/
 images/
 csvs/
 pictures/
-
+__pycache__/
 
 # C extensions
 *.so
