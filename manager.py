@@ -21,12 +21,10 @@ class GANManager:
         self.discriminator = discriminator
         self.data = data
 
-
         # make loss and optimizers as model params?
         self.batch_size = kwargs["batch_size"]
         self.loss_function = kwargs["loss"]
         self.optimizer = kwargs["optimizer"]
-
 
     def get_noise(self, batch_size=None, mu=0.5, sd=0.5):
         """
@@ -140,13 +138,13 @@ class GANManager:
     def train(
             self,
             epochs,
-            samples_per_epoch=1200,
+            samples_per_epoch=10000,
             trainings_frequency=(5, 5),
             proportion_real=0.5,
             print_every=5,
             print_verbose=True,
-            save_pictures_every=5,
-            how_many_pictures_to_save=20,
+            save_pictures_every=2,
+            how_many_pictures_to_save=10,
             save_model_every=5
     ):
         # TODO write docstring
@@ -166,9 +164,9 @@ class GANManager:
                 count, epoch_acc_g, epoch_acc_d = 0, [], []
                 print("|T| ", end="")
                 while count < samples_per_epoch:
-                # for images, _ in self.data.trainings_data.take(trainings_frequency[1]):
+                    # for images, _ in self.data.trainings_data.take(trainings_frequency[1]):
                     print("-", end="")
-                    count += self.batch_size*trainings_frequency[1]
+                    count += self.batch_size * trainings_frequency[1]
 
                     images = [img for img, _ in self.data.trainings_data.take(trainings_frequency[1])]
                     generator_loss, discriminator_loss = self.forward_step(images, trainings_frequency, proportion_real)
@@ -182,13 +180,14 @@ class GANManager:
                 real_accuracy, real_loss, fake_accuracy, fake_loss = self.test_discriminator()
 
                 if epoch % print_every == 0:
+                    print(f"EPOCH: {epoch}")
                     if print_verbose:
                         test_loss = f"|| Mean Validation D-Loss for real images: {real_loss}, Mean Validation D-Loss for generated images: {fake_loss} "
                         test_accuracy = f"Mean Validation D-Accuracy for real images: {real_accuracy}, Mean Validation D-Accuracy for " \
                                         f"generated images: {fake_accuracy} || "
                     else:
-                        test_loss = f"|| Mean Validation D-Loss: {(real_loss+fake_loss)/2} "
-                        test_accuracy = f"Mean Validation D-Accuracy: {(real_accuracy+fake_accuracy)/2} ||"
+                        test_loss = f"|| Mean Validation D-Loss: {(real_loss + fake_loss) / 2} "
+                        test_accuracy = f"Mean Validation D-Accuracy: {(real_accuracy + fake_accuracy) / 2} ||"
 
                     print(
                         f">\n|D| Mean G-Loss: {generator_losses_accumulator[-1]},",
@@ -197,7 +196,7 @@ class GANManager:
                         test_accuracy
                     )
                     if epoch % save_pictures_every == 0:
-                        self.generate_and_save_images(how_many_pictures_to_save, "./pictures/", str(epoch)+"_")
+                        self.generate_and_save_images(how_many_pictures_to_save, "./pictures/", str(epoch) + "_")
         # ----------- Early Abortion ------------
         except KeyboardInterrupt:
             if input("Manual abortion.. to save the current model answer '1'") == 1:
@@ -248,7 +247,6 @@ class GANManager:
     def calculate_accuracy(self, prediction, real_images=True):
         how_it_should_be = tf.ones_like(prediction) if real_images else tf.zeros_like(prediction)
         return 0
-
 
     def save_model(self):
         # TODO implement save_model function - maybe only save weights?!

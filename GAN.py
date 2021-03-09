@@ -9,30 +9,36 @@ class Discriminator(tf.keras.Model):
             # first conv layer
             layers.Conv2D(filters=32, strides=2, kernel_size=3, padding="same", input_shape=input_shape),
             layers.BatchNormalization(),
-            layers.Activation('relu'),
+            # layers.Activation('relu'),
+            layers.LeakyReLU(alpha=0.2),
 
             # second conv layer
             layers.Conv2D(filters=64, kernel_size=3, padding="same"),
             layers.BatchNormalization(),
-            layers.Activation('relu'),
+            # layers.Activation('relu'),
+            layers.LeakyReLU(alpha=0.2),
 
             # third conv layer
             layers.Conv2D(filters=80, kernel_size=3, strides=2, padding="same"),
             layers.BatchNormalization(),
-            layers.Activation('relu'),
+            # layers.Activation('relu'),
+            layers.LeakyReLU(alpha=0.2),
 
             # fourth conv layer
             layers.Conv2D(filters=100, kernel_size=3, padding="same"),
             layers.BatchNormalization(),
-            layers.Activation('relu'),
+            # layers.Activation('relu'),
+            layers.LeakyReLU(alpha=0.2),
 
             # fifth conv layer
             layers.Conv2D(filters=128, kernel_size=3, strides=2, padding="same"),
             layers.BatchNormalization(),
-            layers.Activation('relu'),
+            # layers.Activation('relu'),
+            layers.LeakyReLU(alpha=0.2),
 
             layers.Flatten(),
             layers.Dense(1),
+            layers.Dropout(0.2),
             layers.Activation("sigmoid")
         ]
 
@@ -49,28 +55,34 @@ class Generator(tf.keras.Model):
         self._latentspace = latentspace
         self.layer_list = [
             layers.Dense(8 * 8 * 128, use_bias=False, input_shape=(None, latentspace)),
-            layers.Activation('relu'),
+            # layers.Activation('relu'),
+            layers.LeakyReLU(alpha=0.2),
             layers.Reshape((8, 8, 128)),  # 8x8
 
             layers.Conv2DTranspose(256, kernel_size=4, strides=(2, 2), padding="same"),  # 16x16
             layers.BatchNormalization(),
-            layers.Activation('relu'),
+            # layers.Activation('relu'),
+            layers.LeakyReLU(alpha=0.2),
 
             layers.Conv2DTranspose(128, kernel_size=4, strides=(2, 2), padding="same"),  # 32x32
             layers.BatchNormalization(),
-            layers.Activation('relu'),
+            # layers.Activation('relu'),
+            layers.LeakyReLU(alpha=0.2),
 
             layers.Conv2DTranspose(64, kernel_size=4, strides=(2, 2), padding="same"),  # 64x64
             layers.BatchNormalization(),
-            layers.Activation('relu'),
+            # layers.Activation('relu'),
+            layers.LeakyReLU(alpha=0.2),
 
             layers.Conv2DTranspose(32, kernel_size=4, strides=(2, 2), padding="same"),  # 128x138
             layers.BatchNormalization(),
-            layers.Activation('relu'),
+            # layers.Activation('relu'),
+            layers.LeakyReLU(alpha=0.2),
 
             layers.Conv2DTranspose(16, kernel_size=4, strides=(2, 2), padding="same"),  # 256x256
             layers.BatchNormalization(),
-            layers.Activation('relu'),
+            # layers.Activation('relu'),
+            layers.LeakyReLU(alpha=0.2),
 
             layers.Conv2D(4, kernel_size=1, padding="same"),
             layers.Activation('sigmoid')
