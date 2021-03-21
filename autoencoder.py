@@ -137,11 +137,11 @@ class Autoencoder(tf.keras.Model):
 
 if __name__ == "__main__":
     img = tf.ones((1, 64, 64, 3))
-    # dec = Decoder(10, [4, 4, 64])
-    # print(dec.summary())
-    # enc = Encoder((64, 64, 3), 10)
-    # print(enc.summary())
+    dec = Decoder(10, [4, 4, 64])
+    print(dec.summary())
+    enc = Encoder((64, 64, 3), 10)
+    print(enc.summary())
     a = Autoencoder((64, 64, 3), 10)
     print(a.summary())
-    # print(a.encode(img))
-    # print(a.predict(img))
+    print(a.encode_images(img))
+    print(a.predict(img))
