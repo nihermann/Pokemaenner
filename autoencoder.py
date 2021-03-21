@@ -105,6 +105,7 @@ class Decoder(tf.keras.Model):
 class Autoencoder(tf.keras.Model):
     def __init__(self, image_shape, latentspace, add_encoder_noise=True, **kwargs):
         super(Autoencoder, self).__init__(**kwargs)
+
         self.encoder = Encoder(image_shape, latentspace, add_noise=add_encoder_noise)
         self.decoder = Decoder(latentspace, [4, 4, 64])
 
@@ -112,13 +113,24 @@ class Autoencoder(tf.keras.Model):
 
     @tf.function
     def call(self, x):
+        # just encode and decode a batch of images.
         encoding = self.encoder(x)
         return self.decoder(encoding)
     
     def encode_images(self, images):
+        """
+        Translates images to their respective latentspace embedding.
+        :param images: batch of images.
+        :return: embedded images.
+        """
         return self.encoder.predict(images)
     
     def autoencode_images(self, images):
+        """
+        Encodes and Decodes a batch of images for predictions. Same as autoencoder.predict(images)
+        :param images: batch of images.
+        :return: the reconstructed images.
+        """
         return self.predict(images)
 
 
