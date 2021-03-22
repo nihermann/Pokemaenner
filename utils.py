@@ -30,6 +30,8 @@ def save_images(images, save_to="", prefix=""):
         )
 
 
+def default_value(default, alternative):
+    return default if alternative is None else alternative
 
 
 if __name__ == "__main__":
