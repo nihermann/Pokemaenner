@@ -25,16 +25,37 @@ def unpacking(path,new_path):
                 shutil.copy(path, image)
 
 
+# uniform mode and size
+def resize_and_convert(image_path, image_width = 128, image_height = 128):
+    img = Image.open(image_path)
+
+    if img.mode != "RGB":
+        img = img.convert("RGBA") #convert image to "RGBA" to paste it with a white background
+        background = Image.new("RGB", img.size, (255, 255, 255))
+        img.load() # required for png.split()
+        background.paste(img, mask=img.split()[3]) # 3 is the alpha channel
+        background = background.resize((image_height,image_width)) #resize to 64,64,3
+        os.remove(image_path) #remove the original image
+        background.save(image_path, 'PNG') #save the new image
+
+def resize(img_path, image_width = 128, image_height = 128 , folder = "data"):
+    if img.size != (image_height,image_width):
+        img = Image.open(os.path.join(os.getcwd(), "data", img_path))
+        img = img.resize((image_height,image_width)) #resize to 64,64,3
+        os.remove(os.path.join(os.getcwd(),folder, img_path)) #remove the original image
+        img.save(os.path.join(os.getcwd(), folder, img_path), 'PNG') #save the new image
+        print("resizing", img_path)
+
 #uniform file type
 def make_png(image_path):
     # removing any non png and converting it into png (jpeg, jpg)
-    img = Image.open(os.path.join(data_white_folder,img_path))
+    img = Image.open(image_path)
     if ".jpg" in image_path:
-        img.save(f"{img_path[:-3]}png", "PNG")
-        os.remove(os.path.join(data_white_folder,img_path))
+        img.save(f"{image_path[:-3]}png", "PNG")
+        os.remove(image_path)
     if ".jpeg" in image_path:
-        img.save(f"{img_path[:-4]}png", "PNG")
-        os.remove(os.path.join(data_white_folder,img_path))
+        img.save(f"{image_path[:-4]}png", "PNG")
+        os.remove(image_path)
 
 #uniform the backgrounds
 def make_white(img, b = 0, g = 0, r = 0):
@@ -75,18 +96,18 @@ def uniform_background(image_path, r = 0,g = 0,b = 0):
         os.remove(image_path) #remove and save it
         img2.save(image_path, "PNG")
 
-# uniform mode and size
-def resize_and_convert(image_path):
-    img = Image.open(image_path)
-
-    if img.mode != "RGB":
-        img = img.convert("RGBA") #convert image to "RGBA" to paste it with a white background
-        background = Image.new("RGB", img.size, (255, 255, 255))
-        img.load() # required for png.split()
-        background.paste(img, mask=img.split()[3]) # 3 is the alpha channel
-        background = background.resize((64,64)) #resize to 64,64,3
-        os.remove(image_path) #remove the original image
-        background.save(image_path, 'PNG') #save the new image
+def uniform(image_path, image_height = 128, image_width=128):
+    try:
+        # uniform the size and the transparency
+        resize_and_convert(image_path,image_height,image_width)
+        # uniform the filetype
+        make_png(image_path)
+        # uniform the backgrounds
+        uniform_background(image_path)
+    except:
+        print(f"{image_path} removed")
+        os.remove(image_path)
+        pass
 
 if __name__ == "__main__":
     #get all the needed paths
@@ -95,24 +116,14 @@ if __name__ == "__main__":
     old_pokemon_folder = os.path.join(current, "old_pokemon")
     sprites_folder = os.path.join(current, "pokemon_sprites")
     alternative_folder = os.path.join(current, "pokemon_alternative_artwork")
-    complete_data_folder = os.path.join(current, "complete_data", "pokemon")
+    complete_data_folder = os.path.join(current, "all")
 
     #unpacking evey folder to get one with all the images
-    unpacking(pokemon_folder, complete_data)
-    unpacking(old_pokemon_folder, complete_data)
-    unpacking(sprites_folder, complete_data)
-    unpacking(alternative_folder, complete_data)
+    # unpacking(pokemon_folder, complete_data)
+    # unpacking(old_pokemon_folder, complete_data)
+    # unpacking(sprites_folder, complete_data)
+    # unpacking(alternative_folder, complete_data)
 
     for image in os.listdir(complete_data_folder):
-        try:
-            image_path = os.path.join(complete_data_folder, image)
-            # uniform the size and the transparency
-            resize_and_convert(image_path)
-            # uniform the filetype
-            make_png(image_path)
-            # uniform the backgrounds
-            uniform_background(image_path)
-        except:
-            print(f"{img_path} removed")
-            os.remove(os.path.join(data_white_folder,img_path))
-            pass
+        image_path = os.path.join(complete_data_folder, image)
+        uniform(image_path)
