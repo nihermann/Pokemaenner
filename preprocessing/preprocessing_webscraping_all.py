@@ -95,6 +95,6 @@ if __name__ == "__main__":
 
     # sometimes do to laggy internet it doesn't resize properly only do this if
     # if you can see that there are wrongly sized images in your data folder (checks before resizing but still)
-    images = os.listdir(os.path.join(os.getcwd(), "data"))
-    for img_path in images:
-        resize(img_path,128,128)
+    # images = os.listdir(os.path.join(os.getcwd(), "data"))
+    # for img_path in images:
+    #     resize(img_path,128,128)

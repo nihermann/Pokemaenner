@@ -25,6 +25,10 @@ def unpacking(path,new_path):
                 shutil.copy(path, image)
 
 
+def overwrite(img, image_path):
+    os.remove(image_path) # remove the original image
+    img.save(image_path, "PNG") # and save the new one
+
 # uniform mode and size
 def resize_and_convert(image_path, image_width = 128, image_height = 128):
     img = Image.open(image_path)
@@ -35,27 +39,25 @@ def resize_and_convert(image_path, image_width = 128, image_height = 128):
         img.load() # required for png.split()
         background.paste(img, mask=img.split()[3]) # 3 is the alpha channel
         background = background.resize((image_height,image_width)) #resize to 64,64,3
-        os.remove(image_path) #remove the original image
-        background.save(image_path, 'PNG') #save the new image
+        overwrite(background,image_path)
 
-def resize(img_path, image_width = 128, image_height = 128 , folder = "data"):
+def resize(img = None,image_path = None, image_width = 128, image_height = 128):
+    if img == None:
+        img = Image.open(image_path)
     if img.size != (image_height,image_width):
-        img = Image.open(os.path.join(os.getcwd(), "data", img_path))
         img = img.resize((image_height,image_width)) #resize to 64,64,3
-        os.remove(os.path.join(os.getcwd(),folder, img_path)) #remove the original image
-        img.save(os.path.join(os.getcwd(), folder, img_path), 'PNG') #save the new image
-        print("resizing", img_path)
+        overwrite(img,image_path)
+        print("resizing", image_path)
 
 #uniform file type
 def make_png(image_path):
     # removing any non png and converting it into png (jpeg, jpg)
     img = Image.open(image_path)
     if ".jpg" in image_path:
-        img.save(f"{image_path[:-3]}png", "PNG")
-        os.remove(image_path)
+        overwrite(img, f"{image_path[:-3]}png")
     if ".jpeg" in image_path:
-        img.save(f"{image_path[:-4]}png", "PNG")
-        os.remove(image_path)
+        overwrite(img, f"{image_path[:-4]}png")
+
 
 #uniform the backgrounds
 def make_white(img, b = 0, g = 0, r = 0):
@@ -96,6 +98,50 @@ def uniform_background(image_path, r = 0,g = 0,b = 0):
         os.remove(image_path) #remove and save it
         img2.save(image_path, "PNG")
 
+def pad_to_square(img):
+    # read image
+    ht, wd, cc= img.shape
+    # create new image of desired size and color (blue) for padding
+    if ht > wd:
+        ww = hh = ht
+    else:
+        ww = hh = wd
+    color = (255,255,255)
+    result = np.full((hh,ww,cc), color, dtype=np.uint8)
+
+    # compute center offset
+    xx = (ww - wd) // 2
+    yy = (hh - ht) // 2
+
+    # copy img image into center of result image
+    result[yy:yy+ht, xx:xx+wd] = img
+    return result
+
+def center_focus(image_path,tol=255, border = 4):
+    '''
+    Removes unecessary white borders of image (makes the entire image to its focal point)
+    :param tol = background color or border color to be removed
+    :border = remaining border of the image
+    '''
+    img = cv2.imread(image_path)
+    mask = img<tol
+    if img.ndim==3:
+        mask = mask.all(2)
+    m,n = mask.shape
+    mask0,mask1 = mask.any(0),mask.any(1)
+    col_start,col_end = mask0.argmax(),n-mask0[::-1].argmax()
+    row_start,row_end = mask1.argmax(),m-mask1[::-1].argmax()
+    img1 = pad_to_square(img[row_start-border:row_end+border,col_start-border:col_end+border])
+    # You may need to convert the color.
+    img1 = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img1 = Image.fromarray(img)
+    if np.sum(cv_img == (255, 255, 255)) > (128*128)-500:
+        print(f"{image_path} would have been destroyed")
+        resize(img,image_path)
+    else:
+        # only resize and save if it doesn't destroy the original image
+        resize(img1,image_path)
+
 def uniform(image_path, image_height = 128, image_width=128):
     try:
         # uniform the size and the transparency
@@ -104,6 +150,9 @@ def uniform(image_path, image_height = 128, image_width=128):
         make_png(image_path)
         # uniform the backgrounds
         uniform_background(image_path)
+        # focus on the pokemon by removing unneccary borders
+        center_focus(image_path)
+
     except:
         print(f"{image_path} removed")
         os.remove(image_path)
@@ -112,18 +161,7 @@ def uniform(image_path, image_height = 128, image_width=128):
 if __name__ == "__main__":
     #get all the needed paths
     current = os.getcwd()
-    pokemon_folder = os.path.join(current, "new_pokemon")
-    old_pokemon_folder = os.path.join(current, "old_pokemon")
-    sprites_folder = os.path.join(current, "pokemon_sprites")
-    alternative_folder = os.path.join(current, "pokemon_alternative_artwork")
-    complete_data_folder = os.path.join(current, "all")
 
-    #unpacking evey folder to get one with all the images
-    # unpacking(pokemon_folder, complete_data)
-    # unpacking(old_pokemon_folder, complete_data)
-    # unpacking(sprites_folder, complete_data)
-    # unpacking(alternative_folder, complete_data)
-
-    for image in os.listdir(complete_data_folder):
-        image_path = os.path.join(complete_data_folder, image)
+    for image in images:
+        image_path = os.path.join("data", image)
         uniform(image_path)
