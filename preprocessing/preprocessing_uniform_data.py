@@ -150,8 +150,6 @@ def uniform(image_path, image_height = 128, image_width=128):
         make_png(image_path)
         # uniform the backgrounds
         uniform_background(image_path)
-        # focus on the pokemon by removing unneccary borders
-        center_focus(image_path)
 
     except:
         print(f"{image_path} removed")
@@ -161,7 +159,9 @@ def uniform(image_path, image_height = 128, image_width=128):
 if __name__ == "__main__":
     #get all the needed paths
     current = os.getcwd()
+    images = os.listdir("data")
 
     for image in images:
         image_path = os.path.join("data", image)
+
         uniform(image_path)
