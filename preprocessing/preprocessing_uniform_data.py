@@ -46,8 +46,8 @@ def resize(img = None,image_path = None, image_width = 128, image_height = 128):
         img = Image.open(image_path)
     if img.size != (image_height,image_width):
         img = img.resize((image_height,image_width)) #resize to 64,64,3
-        overwrite(img,image_path)
-        print("resizing", image_path)
+    overwrite(img,image_path)
+    print("resizing", image_path)
 
 #uniform file type
 def make_png(image_path):
@@ -136,9 +136,9 @@ def center_focus(image_path,tol=255, border = 4):
     # You may need to convert the color.
     img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
 
-    if np.sum(img1 == (255, 255, 255)) > (128*128*3)-500:
+    if np.sum(img1 == (255, 255, 255)) > (128*128*3)-2000:
         print(f"{image_path} would have been destroyed")
-        resize(Image.fromarray(img),image_path)
+        resize(Image.open(image_path),image_path)
     else:
         img1 = Image.fromarray(img1)
         # only resize and save if it doesn't destroy the original image
