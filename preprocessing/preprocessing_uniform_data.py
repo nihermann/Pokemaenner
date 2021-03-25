@@ -117,7 +117,7 @@ def pad_to_square(img):
     result[yy:yy+ht, xx:xx+wd] = img
     return result
 
-def center_focus(image_path,tol=255, border = 0):
+def center_focus(image_path,tol=255, border = 4):
     '''
     Removes unecessary white borders of image (makes the entire image to its focal point)
     :param tol = background color or border color to be removed
