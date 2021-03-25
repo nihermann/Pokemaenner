@@ -117,12 +117,13 @@ def pad_to_square(img):
     result[yy:yy+ht, xx:xx+wd] = img
     return result
 
-def center_focus(image_path,tol=255, border = 4):
+def center_focus(image_path,tol=255, border = 0):
     '''
     Removes unecessary white borders of image (makes the entire image to its focal point)
     :param tol = background color or border color to be removed
     :border = remaining border of the image
     '''
+
     img = cv2.imread(image_path)
     mask = img<tol
     if img.ndim==3:
@@ -133,12 +134,13 @@ def center_focus(image_path,tol=255, border = 4):
     row_start,row_end = mask1.argmax(),m-mask1[::-1].argmax()
     img1 = pad_to_square(img[row_start-border:row_end+border,col_start-border:col_end+border])
     # You may need to convert the color.
-    img1 = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img1 = Image.fromarray(img)
-    if np.sum(cv_img == (255, 255, 255)) > (128*128*3)-500:
+    img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
+
+    if np.sum(img1 == (255, 255, 255)) > (128*128*3)-500:
         print(f"{image_path} would have been destroyed")
-        resize(img,image_path)
+        resize(Image.fromarray(img),image_path)
     else:
+        img1 = Image.fromarray(img1)
         # only resize and save if it doesn't destroy the original image
         resize(img1,image_path)
 
