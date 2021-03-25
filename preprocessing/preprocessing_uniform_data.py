@@ -41,13 +41,19 @@ def resize_and_convert(image_path, image_width = 128, image_height = 128):
         background = background.resize((image_height,image_width)) #resize to 64,64,3
         overwrite(background,image_path)
 
+def resize_and_save(image_path = None, image_width = 128, image_height = 128):
+    img = Image.open(image_path)
+
+    if img.size != (image_height,image_width):
+        img = img.resize((image_height,image_width)) #resize to 64,64,3
+    overwrite(img,image_path)
+
 def resize(img = None,image_path = None, image_width = 128, image_height = 128):
     if img == None:
         img = Image.open(image_path)
     if img.size != (image_height,image_width):
         img = img.resize((image_height,image_width)) #resize to 64,64,3
-    overwrite(img,image_path)
-    print("resizing", image_path)
+    return img
 
 #uniform file type
 def make_png(image_path):
@@ -117,6 +123,22 @@ def pad_to_square(img):
     result[yy:yy+ht, xx:xx+wd] = img
     return result
 
+def convert_pil_to_cv(img):
+    # use numpy to convert the pil_image into a numpy array
+    numpy_image=np.array(img)
+
+    # convert to a openCV2 image, notice the COLOR_RGB2BGR which means that
+    # the color is converted from RGB to BGR format
+    opencv_image=cv2.cvtColor(numpy_image, cv2.COLOR_RGB2BGR)
+    return opencv_image
+
+def convert_cv_to_pil(img):
+    # convert from openCV2 to PIL. Notice the COLOR_BGR2RGB which means that
+    # the color is converted from BGR to RGB
+    color_coverted = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    pil_image=Image.fromarray(color_coverted)
+    return pil_image
+
 def center_focus(image_path,tol=255, border = 4):
     '''
     Removes unecessary white borders of image (makes the entire image to its focal point)
@@ -133,16 +155,17 @@ def center_focus(image_path,tol=255, border = 4):
     col_start,col_end = mask0.argmax(),n-mask0[::-1].argmax()
     row_start,row_end = mask1.argmax(),m-mask1[::-1].argmax()
     img1 = pad_to_square(img[row_start-border:row_end+border,col_start-border:col_end+border])
-    # You may need to convert the color.
     img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
+    img1 = Image.fromarray(img1)
+    # only resize and save if it doesn't destroy the original image
+    img1 = resize(img1,image_path)
 
-    if np.sum(img1 == (255, 255, 255)) > (128*128*3)-2000:
+    if np.sum(convert_pil_to_cv(img1) == (255, 255, 255)) > (128*128*3)-2000:
         print(f"{image_path} would have been destroyed")
-        resize(Image.open(image_path),image_path)
+        resize_and_save(convert_cv_to_pil(img),image_path)
     else:
-        img1 = Image.fromarray(img1)
-        # only resize and save if it doesn't destroy the original image
-        resize(img1,image_path)
+        # You may need to convert the color.
+        overwrite(img1,image_path)
 
 def uniform(image_path, image_height = 128, image_width=128):
     try:
@@ -154,7 +177,6 @@ def uniform(image_path, image_height = 128, image_width=128):
         uniform_background(image_path)
 
     except:
-        print(f"{image_path} removed")
         os.remove(image_path)
         pass
 

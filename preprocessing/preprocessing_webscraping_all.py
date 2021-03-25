@@ -1,8 +1,11 @@
 import requests
 from bs4 import BeautifulSoup
 import os
-from preprocessing_uniform_data import uniform, resize, center_focus
+import cv2
+from preprocessing_uniform_data import uniform, resize, center_focus, resize_and_save
 from PIL import Image
+import numpy as np
+import sys
 
 # gets all the pokemon sites of their list
 def get_pokemon(url, identifier = "pokedex"):
@@ -52,7 +55,6 @@ def download(images):
                 im = requests.get(image)
                 f.write(im.content)
             uniform(os.path.join(os.getcwd(),name), 128, 128)
-            print('Loading and converting: ', name)
 
 def imagedown(url,folder):
     try:
@@ -84,25 +86,32 @@ if __name__ == "__main__":
     # for every pokemon found in the first site (the national pokedex) find every possible sprite for it
     # and make a new folder with its name (or not)
     url = 'https://pokemondb.net/pokedex/national'
-    # for pokemon in get_pokemon(url)[1:5]:
-    #     try:
-    #         imagedown(pokemon, folder = "data_test")
-    #     except:
-    #         # move to the original path
-    #         path_parent = os.path.dirname(os.getcwd())
-    #         os.chdir(path_parent)
-    #         print("FAILED: ",pokemon)
+    count = 0
+    for pokemon in get_pokemon(url)[1:]:
+        try:
+            count = count + 1
+            print("Number of downloaded images:",count,sep='',end="\r",flush=True)
+
+            imagedown(pokemon, folder = "data")
+
+        except:
+            # move to the original path
+            path_parent = os.path.dirname(os.getcwd())
+            os.chdir(path_parent)
 
     images = os.listdir("data")
 
+    # center_focus("data/sprites_home_normal_absol_mega.png")
     for image in images:
         image_path = os.path.join(os.getcwd(),"data", image)
-        if "_go_" not in image and "artwork" not in image and "sprite" in image:
-            # focus on the pokemon by removing unneccary borders
-            center_focus(image_path)
+        try:
+            if "artwork" not in image and "sprite" in image:
+                center_focus(image_path)
+        except:
+            pass
 
     # sometimes do to laggy internet it doesn't resize properly only do this if
     # if you can see that there are wrongly sized images in your data folder (checks before resizing but still)
-    images = os.listdir(os.path.join(os.getcwd(), "data"))
-    for img_path in images:
-        resize(img_path,128,128)
+    # images = os.listdir(os.path.join(os.getcwd(), "data"))
+    # for img_path in images:
+    #     resize_and_save(os.path.join(os.getcwd(), "data",img_path),128,128)
