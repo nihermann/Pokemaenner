@@ -61,6 +61,16 @@ class Encoder(tf.keras.Model):
 
         super(Encoder, self).__init__(inp, out, **kwargs)
 
+    def forward_step(self, x, target):
+        with tf.GradientTape() as tape:
+            pred = self(x)
+            loss = self.compiled_loss(target, pred)
+
+        gradients = tape.gradient(loss, self.trainable_variables)
+        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+
+        return loss
+
 
 class Decoder(tf.keras.Model):
     def __init__(
@@ -269,6 +279,16 @@ class DiscriminatorLatent(tf.keras.Model):
             inputs = layer(inputs)
         return inputs
 
+    def forward_step(self, x, target):
+        with tf.GradientTape() as tape:
+            pred = self(x)
+            loss = self.compiled_loss(target, pred)
+
+        gradients = tape.gradient(loss, self.trainable_variables)
+        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+
+        return loss
+
 
 class DenseBlock(tf.keras.Model):
     def __init__(self, neurons_per_layer, hidden_activation_fn, add_noise=True):
@@ -289,36 +309,36 @@ class DenseBlock(tf.keras.Model):
         return self.concat([inputs, x])
 
 
-class Autoencoder(tf.keras.Model):
-    def __init__(self, image_shape, latentspace, add_encoder_noise=True, **kwargs):
-        super(Autoencoder, self).__init__(**kwargs)
-
-        self.encoder = Encoder(image_shape, latentspace, add_noise=add_encoder_noise)
-        self.decoder = Decoder(latentspace, [4, 4, 64])
-
-        self.build((None, *image_shape))
-
-    @tf.function
-    def call(self, x):
-        # just encode and decode a batch of images.
-        encoding = self.encoder(x)
-        return self.decoder(encoding)
-
-    def encode_images(self, images):
-        """
-        Translates images to their respective latentspace embedding.
-        :param images: batch of images.
-        :return: embedded images.
-        """
-        return self.encoder.predict(images)
-
-    def autoencode_images(self, images):
-        """
-        Encodes and Decodes a batch of images for predictions. Same as autoencoder.predict(images)
-        :param images: batch of images.
-        :return: the reconstructed images.
-        """
-        return self.predict(images)
+# class Autoencoder(tf.keras.Model):
+#     def __init__(self, image_shape, latentspace, add_encoder_noise=True, **kwargs):
+#         super(Autoencoder, self).__init__(**kwargs)
+#
+#         self.encoder = Encoder(image_shape, latentspace, add_noise=add_encoder_noise)
+#         self.decoder = Decoder(latentspace, [4, 4, 64])
+#
+#         self.build((None, *image_shape))
+#
+#     @tf.function
+#     def call(self, x):
+#         # just encode and decode a batch of images.
+#         encoding = self.encoder(x)
+#         return self.decoder(encoding)
+#
+#     def encode_images(self, images):
+#         """
+#         Translates images to their respective latentspace embedding.
+#         :param images: batch of images.
+#         :return: embedded images.
+#         """
+#         return self.encoder.predict(images)
+#
+#     def autoencode_images(self, images):
+#         """
+#         Encodes and Decodes a batch of images for predictions. Same as autoencoder.predict(images)
+#         :param images: batch of images.
+#         :return: the reconstructed images.
+#         """
+#         return self.predict(images)
 
 
 if __name__ == "__main__":
