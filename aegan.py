@@ -1,17 +1,28 @@
 import tensorflow as tf
+from tensorflow.keras.metrics import Mean
 import os
 import models
 
 
-class AEGAN:
+class AEGAN(tf.keras.Model):
     def __init__(
             self,
             image_shape,
             latentspace,
+            batch_size,
+            noise_generating_fn=None,
             continue_from_saved_models=False,
             path="./models",
             load_compiled=False,
     ):
+        super(AEGAN, self).__init__()
+        self.compile()
+        self.setup_metrics()
+
+        assert batch_size % 8 == 0, "batch size needs to be divisible by 8 with no remainder."
+
+        self.batch_size = batch_size//8
+        self.noise_generating_fn = noise_generating_fn
 
         loading_successful = False
         if continue_from_saved_models:
@@ -42,10 +53,27 @@ class AEGAN:
                 name="image_discriminator"
             )
 
-            self.discriminator_latent = models.DiscriminatorLatent(latentspace, name="latent_discriminator")
+            self.discriminator_latent = models.DiscriminatorLatent(
+                latentspace,
+                num_blocks=16,
+                neurons_per_layer=16,
+                hidden_activation="relu",
+                output_activation="sigmoid",
+                name="latent_discriminator"
+            )
 
-        self.aegan = self.build_aegan()
-        self.compile_aegan()
+        self.aegan = self._build_aegan()
+        self._compile()
+
+    def setup_metrics(self):
+        self.dis_image_loss = Mean(name="dis_image_loss")
+        self.dis_latent_loss = Mean(name="dis_latent_loss")
+        self.aegan_loss = Mean(name="aegan_loss")
+
+    @property
+    def metrics(self):
+        return [self.dis_image_loss, self.dis_latent_loss, self.aegan_loss]
+
 
     def try_load_all_models(self, path, compile=False):
         files = os.listdir(path)
@@ -77,7 +105,7 @@ class AEGAN:
             print("\nLoading was successful! Continuing with loaded models...\n")
         return num_loaded == 4
 
-    def build_aegan(self):
+    def _build_aegan(self):
         self.discriminator_image.trainable = False
         self.discriminator_latent.trainable = False
         input_image_shape = self.encoder.input_shape[1:]
@@ -86,28 +114,40 @@ class AEGAN:
         except AttributeError:
             input_latent_shape = self.generator.start_shape[1:]
 
-        x_real = tf.keras.layers.Input(input_image_shape, name="image_input")
-        z_real = tf.keras.layers.Input(input_latent_shape, name="latentspace_input")
+        # image path
+        real_img = tf.keras.layers.Input(input_image_shape, name="image_input")
+        embedded_real_img = self.encoder(real_img)
 
-        z_hat = self.encoder(x_real)
-        x_tilde = self.generator(z_hat)
-        x_hat = self.generator(z_real)
-        z_tilde = self.encoder(x_hat)
+        prediction_real_embedding = self.discriminator_latent(embedded_real_img)
+        reconstructed_real_img = self.generator(embedded_real_img)
 
-        prediction_x_hat = self.discriminator_image(x_hat)
-        prediction_x_tilde = self.discriminator_image(x_tilde)
+        prediction_reconstructed_img = self.discriminator_image(reconstructed_real_img)
 
-        prediction_z_hat = self.discriminator_latent(z_hat)
-        prediction_z_tilde = self.discriminator_latent(z_tilde)
+        # latent path
+        real_z = tf.keras.layers.Input(input_latent_shape, name="latentspace_input")
+        generated_img = self.generator(real_z)
 
-        return tf.keras.Model([x_real, z_real], [x_tilde, z_tilde,
-                                                 prediction_x_hat,
-                                                 prediction_x_tilde,
-                                                 prediction_z_hat,
-                                                 prediction_z_tilde],
-                                                 name="AEGAN")
+        prediction_fake_img = self.discriminator_image(generated_img)
+        reconstructed_latent_vector = self.encoder(generated_img)
 
-    def compile_aegan(self):
+        prediction_reconstructed_embedding = self.discriminator_latent(reconstructed_latent_vector)
+
+        return tf.keras.Model([real_img, real_z], [reconstructed_real_img,
+                                                   reconstructed_latent_vector,
+                                                   prediction_fake_img,
+                                                   prediction_reconstructed_img,
+                                                   prediction_real_embedding,
+                                                   prediction_reconstructed_embedding], name="AEGAN")
+
+    def _compile(self):
+        self.discriminator_latent.compile(
+            tf.keras.optimizers.Adam(0.0005, beta_1=0.5, clipnorm=1),
+            loss="binary_crossentropy"
+        )
+        self.discriminator_image.compile(
+            tf.keras.optimizers.Adam(0.0005, beta_1=0.5, clipnorm=1),
+            loss="binary_crossentropy"
+        )
         self.aegan.compile(
             tf.keras.optimizers.Adam(0.0002, beta_1=0.5, clipnorm=1),
             loss=[
@@ -120,8 +160,97 @@ class AEGAN:
             loss_weights=[10, 5, 1, 1, 1, 1]
         )
 
+    def train_step(self, real_image_batches=tf.ones((16, 64, 64, 3))):
+        data1, data2, data3, data4, data5, data6, data7, data8 = tf.split(real_image_batches, 8, axis=0)
+
+        real_labels_d = tf.ones((self.batch_size, 1)) * 0.95
+        fake_labels_d = tf.ones((self.batch_size, 1)) * 0.05
+
+        dis_image_loss = 0
+        dis_image_loss += self.discriminator_image.forward_step(
+            data1,
+            real_labels_d
+        )
+
+        generated_images = self.generate_images(self.batch_size)
+        dis_image_loss += self.discriminator_image.forward_step(
+            generated_images,
+            fake_labels_d
+        )
+
+        dis_image_loss += self.discriminator_image.forward_step(
+            data2,
+            real_labels_d
+        )
+
+        reconstructed_images = self.autoencode_images(data3)
+        dis_image_loss += self.discriminator_image.forward_step(
+            reconstructed_images,
+            fake_labels_d
+        )
+        self.dis_image_loss.update_state(dis_image_loss/4)
+
+        del generated_images, reconstructed_images, data1, data2, data3
+
+        dis_latent_loss = 0
+        dis_latent_loss += self.discriminator_latent.forward_step(
+            self.noise_generating_fn(self.batch_size),
+            real_labels_d
+        )
+
+        embedded_image = self.encode(data4)
+        dis_latent_loss += self.discriminator_latent.forward_step(
+            embedded_image,
+            fake_labels_d
+        )
+
+        dis_latent_loss += self.discriminator_latent.forward_step(
+            self.noise_generating_fn(self.batch_size),
+            real_labels_d
+        )
+
+        reconstructed_embedding = self.autoencode_latent(self.noise_generating_fn(self.batch_size))
+        dis_latent_loss += self.discriminator_latent.forward_step(
+            reconstructed_embedding,
+            fake_labels_d
+        )
+        self.dis_latent_loss.update_state(dis_latent_loss/4)
+
+        labels_g = tf.ones((self.batch_size, 1))
+        for data in [data5, data6, data7, data8]:
+            latent = self.noise_generating_fn(self.batch_size)
+
+            with tf.GradientTape() as tape:
+                all_preds_and_reconstructions = self.aegan([data, latent])
+                loss = self.aegan.compiled_loss(
+                    [data, latent, labels_g, labels_g, labels_g, labels_g],
+                    all_preds_and_reconstructions
+                )
+
+            gradients = tape.gradient(loss, self.aegan.trainable_variables)
+            self.aegan.optimizer.apply_gradients(zip(gradients, self.aegan.trainable_variables))
+            self.aegan_loss.update_state(loss)
+
+        return {m.name: m.result() for m in self.metrics}
+
+    def autoencode_images(self, image):
+        encoding = self.encoder(image)
+        return self.generator(encoding)
+
+    def autoencode_latent(self, latent_vector):
+        image = self.generator(latent_vector)
+        return self.encoder(image)
+
+    def encode(self, image):
+        return self.encoder(image)
+
+    def generate_images(self, num):
+        noise = self.noise_generating_fn(num)
+        return self.generator(noise)
+
+
 if __name__ == '__main__':
-    aegan = AEGAN((64, 64, 3), 10, True)
-    aegan.aegan.summary()
-    # tf.keras.utils.plot_model(aegan.aegan, "AEGAN.png", show_shapes=True)
+    aegan = AEGAN((64, 64, 3), 10, 16*8, lambda b: tf.random.normal((b, 10)), False)
+    tb = tf.keras.callbacks.TensorBoard(log_dir="./logs")
+    aegan.fit(tf.ones((8000, 64, 64, 3)), batch_size=16*8, epochs=3, callbacks=[tb])
 
