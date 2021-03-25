@@ -8,6 +8,8 @@ images/
 csvs/
 pictures/
 __pycache__/
+logs/
+models/
 
 # C extensions
 *.so
