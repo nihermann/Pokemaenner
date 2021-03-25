@@ -135,7 +135,7 @@ def center_focus(image_path,tol=255, border = 4):
     # You may need to convert the color.
     img1 = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img1 = Image.fromarray(img)
-    if np.sum(cv_img == (255, 255, 255)) > (128*128)-500:
+    if np.sum(cv_img == (255, 255, 255)) > (128*128*3)-500:
         print(f"{image_path} would have been destroyed")
         resize(img,image_path)
     else:
