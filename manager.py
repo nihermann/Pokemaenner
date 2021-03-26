@@ -1,7 +1,7 @@
 import tensorflow as tf
-import GAN
+from time import time_ns
+import datetime
 import utils
-from data import DataGenerator
 
 
 class GANManager:
@@ -76,7 +76,7 @@ class GANManager:
     def forward_step(self, real_images, trainings_frequency=(5, 5), proportion_real=0.5):
         """
         Compute one forward step
-        :param real_images: Input one batch of real images to train the Discriminator
+        :param real_images: Input one batch of real images to forward_step the Discriminator
         :param trainings_frequency: tuple(n_g, n_d) - how often will each component be trained before switching.
         :param  proportion_real: float[0:1] - how much percent of the should be replaced by generated images?
         :return: float - Generator loss, float - Discriminator loss
@@ -116,13 +116,13 @@ class GANManager:
         """
 
         with tf.GradientTape() as tape:
-            # generate some images to train the discriminator corresponding to the inverse proportion.
+            # generate some images to forward_step the discriminator corresponding to the inverse proportion.
             generated_images = self.generate_images(int((1 - proportion_real) * self.batch_size))
 
             # take the remaining portion from our real images.
             train_batch = tf.concat((real_images, generated_images), axis=0)
 
-            # train the discriminator and assess its performance.
+            # forward_step the discriminator and assess its performance.
             predictions = self.discriminator(train_batch, training=True)
             loss = self.discriminator_loss(
                 real_images_prediction=predictions[:len(real_images)],
@@ -144,6 +144,7 @@ class GANManager:
             print_every=5,
             print_verbose=True,
             save_pictures_every=2,
+            pictures_save_path="./pictures/",
             how_many_pictures_to_save=10,
             save_model_every=5
     ):
@@ -180,7 +181,7 @@ class GANManager:
                 real_accuracy, real_loss, fake_accuracy, fake_loss = self.test_discriminator()
 
                 if epoch % print_every == 0:
-                    print(f"EPOCH: {epoch}")
+                    print(f" EPOCH: {epoch}")
                     if print_verbose:
                         test_loss = f"|| Mean Validation D-Loss for real images: {real_loss}, Mean Validation D-Loss for generated images: {fake_loss} "
                         test_accuracy = f"Mean Validation D-Accuracy for real images: {real_accuracy}, Mean Validation D-Accuracy for " \
@@ -196,12 +197,16 @@ class GANManager:
                         test_accuracy
                     )
                     if epoch % save_pictures_every == 0:
-                        self.generate_and_save_images(how_many_pictures_to_save, "./pictures/", str(epoch) + "_")
+                        self.generate_and_save_images(how_many_pictures_to_save, pictures_save_path, str(epoch) + "_")
+
+                    if epoch % save_model_every == 0:
+                        self.save_model()
         # ----------- Early Abortion ------------
         except KeyboardInterrupt:
             if input("Manual abortion.. to save the current model answer '1'") == 1:
                 try:
-                    self.save_model()
+                    current_time = int(time_ns() / 100) % 10000
+                    self.save_model(str(epoch)+str(current_time))
                 except Exception as e:
                     print("Saving the Model was unsuccessful with the exception", type(e), e)
         # ---------------------------------------
@@ -248,10 +253,19 @@ class GANManager:
         how_it_should_be = tf.ones_like(prediction) if real_images else tf.zeros_like(prediction)
         return 0
 
-    def save_model(self):
-        # TODO implement save_model function - maybe only save weights?!
-        # TODO save one or both models?!
-        pass
+    def save_model(self, name, save_path, only_weights=False):
+        """
+        Method to save both model.
+        :param name: string - name for the model.
+        :param save_path: where to save the models.
+        :param only_weights: bool - whether to save the model or only the weights.
+        """
+        if only_weights:
+            self.discriminator.save_weights(save_path)
+            self.generator.save_weights(save_path)
+        else:
+            self.discriminator.save(save_path + name)
+            self.generator.save(save_path + name)
 
     def load_best_model(self, name=""):
         """
