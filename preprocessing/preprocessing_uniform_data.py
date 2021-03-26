@@ -3,6 +3,7 @@ import shutil
 from PIL import Image
 import cv2
 import numpy as np
+import ntpath
 
 def unpacking(path,new_path):
     for pokemon in os.listdir(path):
@@ -25,9 +26,17 @@ def unpacking(path,new_path):
                 shutil.copy(path, image)
 
 
-def overwrite(img, image_path):
-    os.remove(image_path) # remove the original image
-    img.save(image_path, "PNG") # and save the new one
+def overwrite(img, image_path, jpg_path):
+    if jpg_path != None:
+        img.save(image_path, "PNG") # and save the new one
+        os.remove(jpg_path) # remove the original image
+    else:
+        try:
+            os.remove(image_path) # remove the original image
+            img.save(image_path, "PNG") # and save the new one
+        except:
+            img.save(image_path, "PNG")
+
 
 # uniform mode and size
 def resize_and_convert(image_path, image_width = 128, image_height = 128):
@@ -39,14 +48,24 @@ def resize_and_convert(image_path, image_width = 128, image_height = 128):
         img.load() # required for png.split()
         background.paste(img, mask=img.split()[3]) # 3 is the alpha channel
         background = background.resize((image_height,image_width)) #resize to 64,64,3
-        overwrite(background,image_path)
+        os.remove(image_path) #remove the original image
+        background.save(image_path, 'PNG') #save the new image
+    else:
+        img = img.resize((image_height,image_width)) #resize to 64,64,3
+        os.remove(image_path) #remove the original image
+        img.save(image_path, 'PNG') #save the new image
+
 
 def resize_and_save(image_path = None, image_width = 128, image_height = 128):
-    img = Image.open(image_path)
+    try:
+        img = Image.open(image_path)
 
-    if img.size != (image_height,image_width):
-        img = img.resize((image_height,image_width)) #resize to 64,64,3
-    overwrite(img,image_path)
+        if img.size != (image_height,image_width):
+            img = img.resize((image_height,image_width)) #resize to 64,64,3
+            os.remove(image_path) #remove the original image
+            img.save(image_path, 'PNG') #save the new image
+    except:
+        pass
 
 def resize(img = None,image_path = None, image_width = 128, image_height = 128):
     if img == None:
@@ -60,9 +79,11 @@ def make_png(image_path):
     # removing any non png and converting it into png (jpeg, jpg)
     img = Image.open(image_path)
     if ".jpg" in image_path:
-        overwrite(img, f"{image_path[:-3]}png")
+        img.save(f"{image_path[:-3]}png", "PNG")
+        os.remove(image_path)
     if ".jpeg" in image_path:
-        overwrite(img, f"{image_path[:-4]}png")
+        img.save(f"{image_path[:-4]}png", "PNG")
+        os.remove(image_path)
 
 
 #uniform the backgrounds
@@ -155,37 +176,42 @@ def center_focus(image_path,tol=255, border = 4):
     col_start,col_end = mask0.argmax(),n-mask0[::-1].argmax()
     row_start,row_end = mask1.argmax(),m-mask1[::-1].argmax()
     img1 = pad_to_square(img[row_start-border:row_end+border,col_start-border:col_end+border])
+    # You may need to convert the color.
     img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2RGB)
     img1 = Image.fromarray(img1)
     # only resize and save if it doesn't destroy the original image
     img1 = resize(img1,image_path)
 
     if np.sum(convert_pil_to_cv(img1) == (255, 255, 255)) > (128*128*3)-2000:
-        print(f"{image_path} would have been destroyed")
+        print(f"{path_leaf(image_path)} would have been destroyed")
         resize_and_save(convert_cv_to_pil(img),image_path)
     else:
-        # You may need to convert the color.
         overwrite(img1,image_path)
+
+def path_leaf(path):
+    head, tail = ntpath.split(path)
+    return tail or ntpath.basename(head)
 
 def uniform(image_path, image_height = 128, image_width=128):
     try:
-        # uniform the size and the transparency
-        resize_and_convert(image_path,image_height,image_width)
         # uniform the filetype
         make_png(image_path)
+        try:
+            # uniform the size and the transparency
+            resize_and_convert(image_path,image_height,image_width)
+        except:
+            resize_and_save(image_path)
         # uniform the backgrounds
         uniform_background(image_path)
 
     except:
-        os.remove(image_path)
         pass
-
 if __name__ == "__main__":
     #get all the needed paths
     current = os.getcwd()
-    images = os.listdir("data")
+    images = os.listdir("data_test")
 
     for image in images:
-        image_path = os.path.join("data", image)
+        image_path = os.path.join("data_test", image)
 
         uniform(image_path)
