@@ -50,11 +50,13 @@ def download(images):
     # and download it
     for image in images:
         name = image.replace('https://img.pokemondb.net/','').replace(' ', '_').replace('-', '_').replace('/', '_').replace('&', '_')
-        if '_back_' not in name and 'gif' not in name:
+
+        if '_back_' not in name and '.gif' not in name:
             with open(name, 'wb') as f:
                 im = requests.get(image)
                 f.write(im.content)
             uniform(os.path.join(os.getcwd(),name), 128, 128)
+
 
 def imagedown(url,folder):
     try:
@@ -75,9 +77,8 @@ def imagedown(url,folder):
     artworks = listed_artwork(artwork_soup)
 
     # download all the images in both of the lists
-    download(sprites)
+    # download(sprites)
     download(artworks)
-
     # move to the original path
     path_parent = os.path.dirname(os.getcwd())
     os.chdir(path_parent)
@@ -90,10 +91,9 @@ if __name__ == "__main__":
     for pokemon in get_pokemon(url)[1:]:
         try:
             count = count + 1
-            print("Number of downloaded images:",count,sep='',end="\r",flush=True)
-
             imagedown(pokemon, folder = "data")
-
+            print(f"Number of downloaded pokemon: {count}/903. Current pokemon: {pokemon.replace('https://pokemondb.net/pokedex/','')}",sep='',end="\r",flush=True)
+            print()
         except:
             # move to the original path
             path_parent = os.path.dirname(os.getcwd())
@@ -101,17 +101,17 @@ if __name__ == "__main__":
 
     images = os.listdir("data")
 
-    # center_focus("data/sprites_home_normal_absol_mega.png")
-    for image in images:
-        image_path = os.path.join(os.getcwd(),"data", image)
-        try:
-            if "artwork" not in image and "sprite" in image:
-                center_focus(image_path)
-        except:
-            pass
-
     # sometimes do to laggy internet it doesn't resize properly only do this if
     # if you can see that there are wrongly sized images in your data folder (checks before resizing but still)
-    # images = os.listdir(os.path.join(os.getcwd(), "data"))
-    # for img_path in images:
-    #     resize_and_save(os.path.join(os.getcwd(), "data",img_path),128,128)
+    for image in images:
+        if "artwork" in image:
+            resize_and_save(os.path.join(os.getcwd(),"data",image),128,128)
+
+
+    # for image in images:
+    #     image_path = os.path.join(os.getcwd(),"data", image)
+    #     try:
+    #         if "artwork" not in image and "sprite" in image:
+    #             center_focus(image_path)
+    #     except:
+    #         pass
