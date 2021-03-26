@@ -34,8 +34,8 @@ class DataGenerator:
         ds = tf.keras.preprocessing.image_dataset_from_directory(
             os.path.join(os.getcwd(), self.img_path),
             labels='inferred',  # inters the labels from the given directories
-            label_mode="categorical",  # can also be int, binary etc.
-            color_mode='rgba',
+            label_mode="int",  # can also be int, binary etc.
+            color_mode='rgb',
             batch_size=self.batch_size,
             image_size=(self.img_height, self.img_width),  # reshape if not in the wanted size
             shuffle=False,
@@ -46,10 +46,10 @@ class DataGenerator:
         # applies augmentation to the images in the dataset normalisation, random_brightness usw.)
         ds = ds.map(self.augment)
         # caching to same the augmented images to save time in the next step
-        ds = ds.cache()
+        # ds = ds.cache()
         # # shuffles the dataset (done after caching so that the dataset doesn't freeze and just the same data is returned
-        ds = ds.shuffle(buffer_size=self.batch_size)
-        # prefetch data so that if you train in one training step you can already apply augmentation for the next
+        # ds = ds.shuffle(buffer_size=self.batch_size*10)
+        # prefetch data so that if you forward_step in one training step you can already apply augmentation for the next
         # time step
         ds = ds.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
         # maybe add tf.data.Dataset.from_tensors(ds) to make it a dataset the current output type is a BatchDataset
