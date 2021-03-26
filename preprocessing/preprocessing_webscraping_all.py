@@ -69,11 +69,11 @@ def imagedown(url,folder):
     os.chdir(folder)
 
     # get the soup of the pokemon for both its sprites and its artworks
-    sprites_soup = get_soup(url.replace('pokedex', 'sprites'))
+    # sprites_soup = get_soup(url.replace('pokedex', 'sprites'))
     artwork_soup = get_soup(url.replace('pokedex', 'artwork'))
 
     # find all images in the given parsed html file
-    sprites = listed_sprites(sprites_soup)
+    # sprites = listed_sprites(sprites_soup)
     artworks = listed_artwork(artwork_soup)
 
     # download all the images in both of the lists
