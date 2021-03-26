@@ -17,16 +17,17 @@ class AEGAN(tf.keras.Model):
     ):
         super(AEGAN, self).__init__()
         self.compile()
-        self.setup_metrics()
+        self.initialize_metrics()
 
         assert batch_size % 8 == 0, "batch size needs to be divisible by 8 with no remainder."
 
-        self.batch_size = batch_size//8
+        self.batch_size = batch_size // 8
         self.noise_generating_fn = noise_generating_fn
 
         loading_successful = False
         if continue_from_saved_models:
             loading_successful = self.try_load_all_models(path, load_compiled)
+
         if not loading_successful:
             self.generator = models.Decoder(
                 latentspace,
@@ -65,7 +66,7 @@ class AEGAN(tf.keras.Model):
         self.aegan = self._build_aegan()
         self._compile()
 
-    def setup_metrics(self):
+    def initialize_metrics(self):
         self.dis_image_loss = Mean(name="dis_image_loss")
         self.dis_latent_loss = Mean(name="dis_latent_loss")
         self.aegan_loss = Mean(name="aegan_loss")
@@ -73,7 +74,6 @@ class AEGAN(tf.keras.Model):
     @property
     def metrics(self):
         return [self.dis_image_loss, self.dis_latent_loss, self.aegan_loss]
-
 
     def try_load_all_models(self, path, compile=False):
         files = os.listdir(path)
@@ -188,7 +188,7 @@ class AEGAN(tf.keras.Model):
             reconstructed_images,
             fake_labels_d
         )
-        self.dis_image_loss.update_state(dis_image_loss/4)
+        self.dis_image_loss.update_state(dis_image_loss / 4)
 
         del generated_images, reconstructed_images, data1, data2, data3
 
@@ -214,7 +214,7 @@ class AEGAN(tf.keras.Model):
             reconstructed_embedding,
             fake_labels_d
         )
-        self.dis_latent_loss.update_state(dis_latent_loss/4)
+        self.dis_latent_loss.update_state(dis_latent_loss / 4)
 
         labels_g = tf.ones((self.batch_size, 1))
         for data in [data5, data6, data7, data8]:
@@ -250,7 +250,6 @@ class AEGAN(tf.keras.Model):
 
 
 if __name__ == '__main__':
-    aegan = AEGAN((64, 64, 3), 10, 16*8, lambda b: tf.random.normal((b, 10)), False)
+    aegan = AEGAN((64, 64, 3), 10, 16 * 8, lambda b: tf.random.normal((b, 10)), False)
     tb = tf.keras.callbacks.TensorBoard(log_dir="./logs")
-    aegan.fit(tf.ones((8000, 64, 64, 3)), batch_size=16*8, epochs=3, callbacks=[tb])
-
+    aegan.fit(tf.ones((8000, 64, 64, 3)), batch_size=16 * 8, epochs=3, callbacks=[tb])
