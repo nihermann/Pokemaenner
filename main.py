@@ -20,10 +20,11 @@ Original file is located at
 import tensorflow as tf
 from manager import GANManager
 from data import DataGenerator
-import GAN
+import gan
+tf.keras.backend.set_floatx('float32')
 
 # @title ## Data Settings
-image_shape = (256,256)  # @param
+image_shape = (64, 64)  # @param
 image_path = "./images/"  # @param {type:"string"}
 batch_size = 32  # @param {type:"integer"}
 validation_split = 0.1  # @param {type:"slider", min:0, max:0.5, step:0.1}
@@ -41,13 +42,13 @@ data = DataGenerator(
 # @title Generator Arguments
 latentspace = 100  # @param {type:"slider", min:2, max:1000, step:1}
 
-generator = GAN.Generator(
+generator = gan.Generator(
     latentspace=latentspace
 )
 
 # @title ## Discriminator Arguments
-discriminator = GAN.Discriminator(
-    input_shape=(None, image_shape[0], image_shape[1], 4)
+discriminator = gan.Discriminator(
+    input_shape=(None, image_shape[0], image_shape[1], 3)
 )
 
 # @title ## Hyperparameters
@@ -90,7 +91,8 @@ trainings_frequency = (5, 5)  # @param {type:"raw"}
 print_every = 1  # @param {type:"integer"}
 print_verbose = True  # @param {type:"boolean"}
 save_pictures_every = 1  # @param {type:"integer"}
-how_many_pictures_to_save = 1  # @param {type:"integer"}
+how_many_pictures_to_save = 2  # @param {type:"integer"}
+pictures_save_path = "./pictures/"  # @param {type:"string"}
 save_model_every = 0  # @param {type:"integer"}
 
 manager.train(
@@ -101,5 +103,6 @@ manager.train(
     print_verbose=print_verbose,
     save_pictures_every=save_pictures_every,
     how_many_pictures_to_save=how_many_pictures_to_save,
+    pictures_save_path=pictures_save_path,
     save_model_every=save_model_every
 )
