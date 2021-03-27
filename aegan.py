@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.metrics import Mean
 import os
 import models
+from utils import (to_grid, save_images)
 
 
 class AEGAN(tf.keras.Model):
@@ -17,7 +18,7 @@ class AEGAN(tf.keras.Model):
     ):
         super(AEGAN, self).__init__()
         self.compile()
-        self.initialize_metrics()
+        self._initialize_metrics()
 
         assert batch_size % 8 == 0, "batch size needs to be divisible by 8 with no remainder."
 
@@ -29,6 +30,8 @@ class AEGAN(tf.keras.Model):
             loading_successful = self.try_load_all_models(path, load_compiled)
 
         if not loading_successful:
+            message = "Build models: [{}]"
+            print(message.format("...."), end="\r")
             self.generator = models.Decoder(
                 latentspace,
                 first_reshape_shape=[4, 4, 64],
@@ -36,6 +39,7 @@ class AEGAN(tf.keras.Model):
                 output_activation="tanh",
                 name="generator"
             )
+            print(message.format(">..."), end="\r")
 
             self.encoder = models.Encoder(
                 image_shape,
@@ -44,6 +48,7 @@ class AEGAN(tf.keras.Model):
                 output_activation="linear",
                 name="encoder"
             )
+            print(message.format("->.."), end="\r")
 
             self.discriminator_image = models.Encoder(
                 image_shape,
@@ -53,6 +58,7 @@ class AEGAN(tf.keras.Model):
                 output_activation="sigmoid",
                 name="image_discriminator"
             )
+            print(message.format("-->."), end="\r")
 
             self.discriminator_latent = models.DiscriminatorLatent(
                 latentspace,
@@ -62,11 +68,14 @@ class AEGAN(tf.keras.Model):
                 output_activation="sigmoid",
                 name="latent_discriminator"
             )
+            print(message.format("--->"), end="\r")
 
         self.aegan = self._build_aegan()
+        print(message.format("----"))
         self._compile()
+        print("Build successfully")
 
-    def initialize_metrics(self):
+    def _initialize_metrics(self):
         self.dis_image_loss = Mean(name="dis_image_loss")
         self.dis_latent_loss = Mean(name="dis_latent_loss")
         self.aegan_loss = Mean(name="aegan_loss")
@@ -249,7 +258,50 @@ class AEGAN(tf.keras.Model):
         return self.generator(noise)
 
 
+class SaveAeganPictures(tf.keras.callbacks.Callback):
+    def __init__(self, save_every: int, save_path: str, data_gen, tensorboard_logdir=None):
+        super(SaveAeganPictures, self).__init__()
+        self.save_every = save_every
+        self.save_path = save_path if save_path.endswith('/') else save_path + '/'
+        self.get_test_images = lambda: data_gen.next()
+
+        self.tbw_generated_imgs = tf.summary.create_file_writer(
+            tensorboard_logdir + '/generated_images') if tensorboard_logdir is not None else None
+        self.tbw_reconstructed_imgs = tf.summary.create_file_writer(
+            tensorboard_logdir + '/reconstructed_images') if tensorboard_logdir is not None else None
+
+    def save(self, images, prefix):
+        grid = to_grid(images, 10)
+        save_images(grid, save_to=self.save_path, prefix=prefix)
+        return grid
+
+    def on_epoch_end(self, epoch, logs=None):
+        if epoch + 1 % self.save_every == 0:
+            imgs = self.get_test_images()
+
+            generated_imgs = self.model.generate_images(imgs.shape[0])
+            gen_grid = self.save(generated_imgs, f"generated{epoch}_loss{logs['aegan_loss']}_")
+
+            reconstructed_imgs = self.model.autoencode_images(imgs)
+            reconstruction_loss = tf.keras.metrics.mean_squared_error(imgs, reconstructed_imgs)
+            reconstruction_loss = int(reconstruction_loss * 10000)
+
+            combined = tf.stack([imgs, reconstructed_imgs], axis=0)
+            rec_grid = self.save(combined, f"reconstructed{epoch}_loss{reconstruction_loss}_")
+
+            if self.tbw_reconstructed_imgs is not None:
+                self.params
+                epoch = -1 if isinstance(epoch, str) else epoch
+                with self.tbw_generated_imgs.as_default():
+                    tf.summary.image("Generated Images", gen_grid, step=epoch)
+                with self.tbw_reconstructed_imgs.as_default():
+                    tf.summary.image("Reconstructed Images", rec_grid, step=epoch)
+
+    def on_train_end(self, logs=None):
+        self.on_epoch_end("FINAL", {"aegan_loss": "None"})
+
+
 if __name__ == '__main__':
     aegan = AEGAN((64, 64, 3), 10, 16 * 8, lambda b: tf.random.normal((b, 10)), False)
-    tb = tf.keras.callbacks.TensorBoard(log_dir="./logs")
-    aegan.fit(tf.ones((8000, 64, 64, 3)), batch_size=16 * 8, epochs=3, callbacks=[tb])
+    tb = tf.keras.callbacks.TensorBoard(log_dir="./logs", update_freq="batch")
+    aegan.fit(tf.ones((16 * 8 * 210, 64, 64, 3)), batch_size=16 * 8, epochs=2, callbacks=[tb])
