@@ -16,93 +16,151 @@ Original file is located at
 # from google.colab import drive
 # drive.mount('/content/drive')
 
-# @title # Using Gan to create new Pokemon
+#@title # Using Gan to create new Pokemon
+import datetime
 import tensorflow as tf
-from manager import GANManager
 from data import DataGenerator
 import gan
-tf.keras.backend.set_floatx('float32')
+from aegan import (AEGAN, SaveAeganPictures)
 
-# @title ## Data Settings
-image_shape = (64, 64)  # @param
-image_path = "./images/"  # @param {type:"string"}
-batch_size = 32  # @param {type:"integer"}
-validation_split = 0.1  # @param {type:"slider", min:0, max:0.5, step:0.1}
-shuffle = True  # @param {type:"boolean"}
+#@title # Model
+#@markdown ## AEGAN
+use_aegan = True #@param {type:"boolean"}
+if use_aegan:
+    image_shape = (64,64) #@param
+    latentspace =  16#@param {type:"integer"}
+    batch_size = 32 #@param {type:"integer"}
+    noise_generating_function =  lambda b: tf.normal((b, latentspace))#@param {type:"raw"}
+    continue_from_saved_models = False #@param {type:"boolean"}
+    path = "./models" #@param ["./models"] {allow-input: true}
+    load_compiled = False #@param {type:"boolean"}
+
+    batch_size *= 8
+
+    model = AEGAN(
+        image_shape=image_shape,
+        latentspace=latentspace,
+        batch_size=batch_size,
+        noise_generating_fn=noise_generating_function,
+        continue_from_saved_models=continue_from_saved_models,
+        path=path,
+        load_compiled=load_compiled
+    )
+
+#@title ## Data Settings
+
+image_path = "/content/drive/MyDrive/images/" #@param {type:"string"}
+images_in_test_split = 16 #@param {type:"slider", min:4, max:20, step:4}
+horizontal_flip = False #@param {type:"boolean"}
+shuffle = True #@param {type:"boolean"}
+
 
 data = DataGenerator(
     img_path=image_path,
     batch_size=batch_size,
-    img_height=image_shape[0],
-    img_width=image_shape[1],
-    validation_split=validation_split,
-    # shuffle=shuffle
+    img_size=image_shape,
+    validation_split=images_in_test_split,
+    horizontal_flip=horizontal_flip,
+    shuffle=shuffle
 )
 
-# @title Generator Arguments
-latentspace = 100  # @param {type:"slider", min:2, max:1000, step:1}
-
-generator = gan.Generator(
-    latentspace=latentspace
-)
-
-# @title ## Discriminator Arguments
-discriminator = gan.Discriminator(
-    input_shape=(None, image_shape[0], image_shape[1], 3)
-)
-
-# @title ## Hyperparameters
+# #@title ## Hyperparameters
 
 
-loss_function = "Binary Cross Entropy"  # @param ["Binary Cross Entropy", "Mean Squared Error"]
-optimizer = "Adam"  # @param ["Adam", "RMSprop", "SGD"]
-learning_rate = 0.001  # @param {type:"number"}
+# loss_function = "Binary Cross Entropy" #@param ["Binary Cross Entropy", "Mean Squared Error"]
+# optimizer = "Adam" #@param ["Adam", "RMSprop", "SGD"]
+# learning_rate = 0.001 #@param {type:"number"}
 
-## Dropdown equivalents
-loss_functions = {
-    "Binary Cross Entropy": tf.keras.losses.BinaryCrossentropy(),
-    "Mean Squared Error": tf.keras.losses.MSE
-}
 
-optimizers = {
-    "Adam": tf.keras.optimizers.Adam(learning_rate),
-    "RMSprop": tf.keras.optimizers.RMSprop(learning_rate),
-    "SGD": tf.keras.optimizers.SGD
-}
+# ## Dropdown equivalents
+# loss_functions = {
+#     "Binary Cross Entropy": tf.keras.losses.BinaryCrossentropy(),
+#     "Mean Squared Error": tf.keras.losses.MSE
+# }
 
-## Final
-kwargs = {
-    "batch_size": batch_size,
-    "loss": loss_functions[loss_function],
-    "optimizer": optimizers[optimizer]
-}
+# optimizers = {
+#     "Adam": tf.keras.optimizers.Adam(learning_rate),
+#     "RMSprop": tf.keras.optimizers.RMSprop(learning_rate),
+#     "SGD": tf.keras.optimizers.SGD
+# }
 
-manager = GANManager(
-    kwargs=kwargs,
-    generator=generator,
-    discriminator=discriminator,
-    data=data
-)
 
-# @title # Training Parameters
-epochs = 100  # @param {type:"integer"}
-samples_per_epoch = 10000  # @param {type:"integer"}
-trainings_frequency = (5, 5)  # @param {type:"raw"}
-print_every = 1  # @param {type:"integer"}
-print_verbose = True  # @param {type:"boolean"}
-save_pictures_every = 1  # @param {type:"integer"}
-how_many_pictures_to_save = 2  # @param {type:"integer"}
-pictures_save_path = "./pictures/"  # @param {type:"string"}
-save_model_every = 0  # @param {type:"integer"}
+# ## Final
+# kwargs = {
+#     "batch_size": batch_size,
+#     "loss": loss_functions[loss_function],
+#     "optimizer": optimizers[optimizer]
+# }
 
-manager.train(
+# manager = GANManager(
+#     kwargs=kwargs,
+#     generator=generator,
+#     discriminator=discriminator,
+#     data=data
+# )
+
+#@title # Training Parameters
+epochs = 100 #@param {type:"integer"}
+samples_per_epoch = 10000 #@param {type:"integer"}
+print_every =  1#@param {type:"integer"}
+print_verbose = "no_prints" #@param ["no_prints", "print_after_each_epoch", "progressbar"]
+print_verbose = {"no_prints": 0, "print_after_each_epoch": 2, "progressbar": 1}[print_verbose]
+
+#@markdown ## Callbacks
+#@markdown ### Model saving
+callbacks = []
+save_models = False #@param {type:"boolean"}
+if save_models:
+    model_path = "./models" #@param ["./models"] {allow-input: true}
+    save_model_every = 0 #@param {type:"integer"}
+    save_weights_only = False #@param {type:"boolean"}
+
+    callbacks.append(
+        tf.keras.callbacks.ModelCheckpoint(
+            filepath=model_path,
+            save_weights_only=save_weights_only
+        )
+    )
+
+#@markdown ### Tensorboard
+use_tensorboard = False #@param {type:"boolean"}
+if use_tensorboard:
+    log_dir = "./logs/images" #@param ["./logs"] {allow-input: true}
+    update_frequency = "epoch" #@param ["batch", "epoch"] {allow-input: true}
+    
+    timestemp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_dir += ('' if log_dir.endswith('/') else '/') + timestemp
+
+    callbacks.append(
+        tf.keras.callbacks.TensorBoard(
+            log_dir=log_dir,
+            update_freq=update_freq
+        )
+    )
+
+#@markdown ### Save Pictures
+#@markdown Images will be saved to file and displayed in tensorboard if activated.
+#@markdown The number of images equals to the amount of pictrures specified in the validation data split.
+save_pictures = False #@param {type:"boolean"}
+if save_pictures:
+    pictures_path = "./output" #@param ["./output/"] {allow-input: true}
+    save_pictures_every = 4 #@param {type:"integer"}
+
+    callbacks.append(
+        SaveAeganPictures( 
+            save_every=save_pictures_every,
+            save_path=pictures_path,
+            data_gen=data.validation_generator,
+            tensorboard_logdir=log_dir
+        )
+    )
+
+
+
+model.fit(
+    x=data.training_generator,
+    steps_per_epoch=samples_per_epoch,
     epochs=epochs,
-    samples_per_epoch=samples_per_epoch,
-    trainings_frequency=trainings_frequency,
-    print_every=print_every,
-    print_verbose=print_verbose,
-    save_pictures_every=save_pictures_every,
-    how_many_pictures_to_save=how_many_pictures_to_save,
-    pictures_save_path=pictures_save_path,
-    save_model_every=save_model_every
+    verbose=print_verbose,
+    callbacks=callbacks,
 )
