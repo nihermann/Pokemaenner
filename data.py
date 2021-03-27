@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import os
 import matplotlib.pyplot as plt
 
@@ -12,7 +13,7 @@ class DataGenerator:
                 xxx.png
     """
 
-    def __init__(self, img_path="images", batch_size=32, img_height=256, img_width=256, validation_split=0.1):
+    def __init__(self, img_path="images", batch_size=32, img_size=(64, 64), images_in_test_split=0, horizontal_flip=True, shuffle=False):
         """
 
         :param img_path: name of the image folder (image folder has to be in the same folder as the excecuting class file)
@@ -23,12 +24,28 @@ class DataGenerator:
         """
         self.img_path = img_path
         self.batch_size = batch_size
-        self.img_width = img_width
-        self.img_height = img_height
-        self.validation_split = validation_split
+        self.img_size = img_size
+        self.images_in_test_split = images_in_test_split
+        self.validation_split = images_in_test_split/len(os.listdir(img_path+"/data"))
+        self.horizontal_flip = horizontal_flip
+        self.shuffle = shuffle
 
-        self.trainings_data = self.generate_data()
-        self.validation_data = self.generate_data("validation")
+        self.training_generator = self._get_image_generator(training_subset=True)
+        self.validation_generator = self._get_image_generator(training_subset=False)
+
+    def _get_image_generator(self, training_subset=False):
+        return ImageDataGenerator(
+            preprocessing_function=lambda img: tf.cast(2*(img/255)-1, tf.float32),
+            validation_split=self.validation_split,
+            horizontal_flip=self.horizontal_flip and training_subset  # only augment if its the trainings subset
+        ).flow_from_directory(
+            directory=self.img_path,
+            target_size=self.img_size,
+            class_mode=None,
+            batch_size=self.batch_size if training_subset else self.images_in_test_split,
+            shuffle=self.shuffle and training_subset,
+            subset="training" if training_subset else "validation"
+        )
 
     def generate_data(self, split_name="training"):
         ds = tf.keras.preprocessing.image_dataset_from_directory(
@@ -37,7 +54,7 @@ class DataGenerator:
             label_mode="int",  # can also be int, binary etc.
             color_mode='rgb',
             batch_size=self.batch_size,
-            image_size=(self.img_height, self.img_width),  # reshape if not in the wanted size
+            image_size=self.img_size,  # reshape if not in the wanted size
             shuffle=False,
             validation_split=self.validation_split,  # split the dataset for validation and training
             subset=split_name,
@@ -75,5 +92,12 @@ class DataGenerator:
 
 
 if __name__ == "__main__":
-    data = DataGenerator("images")
-    # data.visualization()
+    from utils import save_images
+    data = DataGenerator("./preprocessing/data128", images_in_test_split=20, shuffle=True)
+    print(type(data.validation_generator))
+    for i, img in enumerate(data.validation_generator):
+        save_images(img, "./test/", str(i)+"_")
+        if i == 4:
+            break
+
+
