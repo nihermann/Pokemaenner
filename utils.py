@@ -10,8 +10,8 @@ def save_images(images, save_to="", prefix=""):
     :param save_to: string - path to the destination directory. Don't forget the '/' at the end!
     :param prefix: string - name prefix for saved images.
     """
-    # convert the images back to rgb values. Before: [0:1], After: [0:255]
-    images = tf.cast(images * 255, tf.uint8)
+    # convert the images back to rgb values. Before: [-1:1], After: [0:255]
+    images = tf.cast((images + 1) / 2 * 255, tf.uint8)
 
     if not os.path.exists(save_to):
         os.mkdir(save_to)
@@ -34,8 +34,40 @@ def default_value(default, alternative):
     return default if alternative is None else alternative
 
 
+def get_padded_cols(images, border):
+    padding = tf.constant([[0, 0], [border, border], [border, border], [0, 0]])
+    images = tf.pad(images, padding, mode="constant", constant_values=0)
+    cols = tf.reshape(images, shape=(4, -1, images.shape[1], 3))
+    return cols
+
+
+def stack_alternating(a, b):
+    stack = tf.stack([a, b], axis=1)
+    return tf.reshape(stack, (stack.shape[0] * stack.shape[1], *stack.shape[2:]))
+
+
+def to_grid(images, border):
+    if images.ndim == 5:
+        col1 = get_padded_cols(images[0], border)
+        col2 = get_padded_cols(images[1], border)
+        cols = stack_alternating(col1, col2)
+    else:
+        cols = get_padded_cols(images, border)
+
+    grid = cols[0]
+    for col in cols[1:]:
+        grid = tf.concat([grid, col], axis=1)
+
+    return tf.expand_dims(grid, axis=0)
+
+
 if __name__ == "__main__":
     # ones = tf.random.uniform((64, 28, 28, 3))
     # save_images(ones, "pics/", "hihi")
     # print("done")
-    pass
+    from data import DataGenerator
+
+    data = DataGenerator("./preprocessing/data128/", images_in_test_split=20)
+    d = data.validation_generator.next()
+    d = to_grid(tf.stack([d, d], 0), 20)
+    save_images(d, "./test/")
