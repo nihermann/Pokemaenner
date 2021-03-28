@@ -48,7 +48,7 @@ class AEGAN(tf.keras.Model):
                 output_activation="linear",
                 name="encoder"
             )
-            print(message.format("->.."), end="\r")
+            print(message.format("=>.."), end="\r")
 
             self.discriminator_image = models.Encoder(
                 image_shape,
@@ -58,7 +58,7 @@ class AEGAN(tf.keras.Model):
                 output_activation="sigmoid",
                 name="image_discriminator"
             )
-            print(message.format("-->."), end="\r")
+            print(message.format("==>."), end="\r")
 
             self.discriminator_latent = models.DiscriminatorLatent(
                 latentspace,
@@ -68,10 +68,10 @@ class AEGAN(tf.keras.Model):
                 output_activation="sigmoid",
                 name="latent_discriminator"
             )
-            print(message.format("--->"), end="\r")
+            print(message.format("===>"), end="\r")
 
         self.aegan = self._build_aegan()
-        print(message.format("----"))
+        print(message.format("===="))
         self._compile()
         print("Build successfully")
 
@@ -257,6 +257,11 @@ class AEGAN(tf.keras.Model):
         noise = self.noise_generating_fn(num)
         return self.generator(noise)
 
+    @tf.function
+    def call(self, x, training=True):
+        latent = self.noise_generating_fn(self.batch_size)
+        return self.aegan([x, latent])
+
 
 class SaveAeganPictures(tf.keras.callbacks.Callback):
     def __init__(self, save_every: int, save_path: str, data_gen, tensorboard_logdir=None):
@@ -284,7 +289,7 @@ class SaveAeganPictures(tf.keras.callbacks.Callback):
 
             reconstructed_imgs = self.model.autoencode_images(imgs)
             reconstruction_loss = tf.keras.metrics.mean_squared_error(imgs, reconstructed_imgs)
-            reconstruction_loss = int(reconstruction_loss * 10000)
+            reconstruction_loss = tf.reduce_mean(reconstruction_loss)
 
             combined = tf.stack([imgs, reconstructed_imgs], axis=0)
             rec_grid = self.save(combined, f"reconstructed{epoch}_loss{reconstruction_loss}_")
