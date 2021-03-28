@@ -13,7 +13,7 @@ class DataGenerator:
                 xxx.png
     """
 
-    def __init__(self, img_path="images", batch_size=32, img_size=(64, 64), images_in_test_split=0, horizontal_flip=True, shuffle=False):
+    def __init__(self, img_path="images", batch_size=32, images_in_test_split=0, horizontal_flip=True, shuffle=False):
         """
 
         :param img_path: name of the image folder (image folder has to be in the same folder as the excecuting class file)
@@ -24,9 +24,10 @@ class DataGenerator:
         """
         self.img_path = img_path
         self.batch_size = batch_size
-        self.img_size = img_size
+
         self.images_in_test_split = images_in_test_split
-        self.validation_split = images_in_test_split/len(os.listdir(img_path+"/data"))
+        self.validation_split = images_in_test_split/len(os.listdir(os.path.join(img_path, "data")))
+
         self.horizontal_flip = horizontal_flip
         self.shuffle = shuffle
 
@@ -40,7 +41,6 @@ class DataGenerator:
             horizontal_flip=self.horizontal_flip and training_subset  # only augment if its the trainings subset
         ).flow_from_directory(
             directory=self.img_path,
-            target_size=self.img_size,
             class_mode=None,
             batch_size=self.batch_size if training_subset else self.images_in_test_split,
             shuffle=self.shuffle and training_subset,
@@ -93,11 +93,8 @@ class DataGenerator:
 
 if __name__ == "__main__":
     from utils import save_images
-    data = DataGenerator("./preprocessing/data128", images_in_test_split=20, shuffle=True)
-    print(type(data.validation_generator))
+    data = DataGenerator("./preprocessing/data64", images_in_test_split=20, shuffle=False, horizontal_flip=True)
     for i, img in enumerate(data.validation_generator):
-        save_images(img, "./test/", str(i)+"_")
-        if i == 4:
-            break
+        print(i, end="\r")
 
 
