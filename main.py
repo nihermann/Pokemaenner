@@ -17,23 +17,23 @@ Original file is located at
 # drive.mount('/content/drive')
 
 #@title # Using Gan to create new Pokemon
-import datetime
+from datetime import datetime
 import tensorflow as tf
 from data import DataGenerator
 import gan
-from aegan import (AEGAN, SaveAeganPictures)
+from aegan import (AEGAN, SaveAegan)
 
 #@title # Model
+model = None
 #@markdown ## AEGAN
 use_aegan = True #@param {type:"boolean"}
 if use_aegan:
-    image_shape = (64,64) #@param
-    latentspace =  16#@param {type:"integer"}
+    image_shape = (64,64,3) #@param
+    latentspace = 16#@param {type:"integer"}
     batch_size = 32 #@param {type:"integer"}
-    noise_generating_function =  lambda b: tf.normal((b, latentspace))#@param {type:"raw"}
-    continue_from_saved_models = False #@param {type:"boolean"}
-    path = "./models" #@param ["./models"] {allow-input: true}
-    load_compiled = False #@param {type:"boolean"}
+    noise_generating_function = lambda b: tf.random.normal((b, latentspace))  #@param {type:"raw"}
+    continue_from_saved_models = True #@param {type:"boolean"}
+    path = "./outputs/models/" #@param ["./models"] {allow-input: true}
 
     batch_size *= 8
 
@@ -43,13 +43,12 @@ if use_aegan:
         batch_size=batch_size,
         noise_generating_fn=noise_generating_function,
         continue_from_saved_models=continue_from_saved_models,
-        path=path,
-        load_compiled=load_compiled
+        path=path
     )
 
 #@title ## Data Settings
 
-image_path = "/content/drive/MyDrive/images/" #@param {type:"string"}
+image_path = "./preprocessing/data64/" #@param {type:"string"}
 images_in_test_split = 16 #@param {type:"slider", min:4, max:20, step:4}
 horizontal_flip = False #@param {type:"boolean"}
 shuffle = True #@param {type:"boolean"}
@@ -58,8 +57,8 @@ shuffle = True #@param {type:"boolean"}
 data = DataGenerator(
     img_path=image_path,
     batch_size=batch_size,
-    img_size=image_shape,
-    validation_split=images_in_test_split,
+    img_size=image_shape[:2],
+    images_in_test_split=images_in_test_split,
     horizontal_flip=horizontal_flip,
     shuffle=shuffle
 )
@@ -100,10 +99,9 @@ data = DataGenerator(
 # )
 
 #@title # Training Parameters
-epochs = 100 #@param {type:"integer"}
-samples_per_epoch = 10000 #@param {type:"integer"}
-print_every =  1#@param {type:"integer"}
-print_verbose = "no_prints" #@param ["no_prints", "print_after_each_epoch", "progressbar"]
+epochs = 4 #@param {type:"integer"}
+samples_per_epoch = 5 #@param {type:"integer"}
+print_verbose = "progressbar" #@param ["no_prints", "print_after_each_epoch", "progressbar"]
 print_verbose = {"no_prints": 0, "print_after_each_epoch": 2, "progressbar": 1}[print_verbose]
 
 #@markdown ## Callbacks
@@ -111,56 +109,71 @@ print_verbose = {"no_prints": 0, "print_after_each_epoch": 2, "progressbar": 1}[
 callbacks = []
 save_models = False #@param {type:"boolean"}
 if save_models:
-    model_path = "./models" #@param ["./models"] {allow-input: true}
-    save_model_every = 0 #@param {type:"integer"}
-    save_weights_only = False #@param {type:"boolean"}
+    model_path = "./outputs/models/aegan{epoch:03d}.h5" #@param ["./outputs/models/"] {allow-input: true}
 
     callbacks.append(
         tf.keras.callbacks.ModelCheckpoint(
             filepath=model_path,
-            save_weights_only=save_weights_only
+            save_weights_only=save_weights_only,
         )
     )
 
 #@markdown ### Tensorboard
 use_tensorboard = False #@param {type:"boolean"}
+log_dir = None
 if use_tensorboard:
     log_dir = "./logs/images" #@param ["./logs"] {allow-input: true}
     update_frequency = "epoch" #@param ["batch", "epoch"] {allow-input: true}
-    
+
     timestemp = datetime.now().strftime("%Y%m%d-%H%M%S")
     log_dir += ('' if log_dir.endswith('/') else '/') + timestemp
+
+    print(f"TensorBoard logdir: {log_dir}")
 
     callbacks.append(
         tf.keras.callbacks.TensorBoard(
             log_dir=log_dir,
-            update_freq=update_freq
+            update_freq=update_frequency
         )
     )
 
-#@markdown ### Save Pictures
+    def launchTensorBoard():
+        import os
+        os.system('tensorboard --logdir=' + log_dir)
+        return
+
+    import threading
+
+    t = threading.Thread(target=launchTensorBoard, args=([]))
+    t.start()
+
+#@markdown ### Save Pictures and Images for AEGAN
 #@markdown Images will be saved to file and displayed in tensorboard if activated.
 #@markdown The number of images equals to the amount of pictrures specified in the validation data split.
-save_pictures = False #@param {type:"boolean"}
+save_pictures = True #@param {type:"boolean"}
 if save_pictures:
-    pictures_path = "./output" #@param ["./output/"] {allow-input: true}
-    save_pictures_every = 4 #@param {type:"integer"}
+    pictures_path = "./outputs/" #@param ["./output/"] {allow-input: true}
+    save_pictures_every = 2 #@param {type:"integer"}
+    save_model_every = 3 #@param {type:"integer"}
 
     callbacks.append(
-        SaveAeganPictures( 
-            save_every=save_pictures_every,
+        SaveAegan(
+            save_images_every=save_pictures_every,
+            save_model_every=save_model_every,
             save_path=pictures_path,
             data_gen=data.validation_generator,
             tensorboard_logdir=log_dir
         )
     )
 
-
-
+assert model is not None, "Model must not be None, please make sure to enable one of them by setting the respective bool to True!"
+# model = tf.keras.models.load_model("./outputs/models")
+print("Start training..")
 model.fit(
     x=data.training_generator,
     steps_per_epoch=samples_per_epoch,
-    epochs=epochs,
+    epochs=epochs + model.initial_epoch,
     verbose=print_verbose,
     callbacks=callbacks,
+    initial_epoch=model.initial_epoch
 )
