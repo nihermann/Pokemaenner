@@ -16,24 +16,24 @@ Original file is located at
 # from google.colab import drive
 # drive.mount('/content/drive')
 
-#@title # Using Gan to create new Pokemon
+# @title # Using Gan to create new Pokemon
 from datetime import datetime
 import tensorflow as tf
 import utils
 from data import DataGenerator
 from aegan import (AEGAN, SaveAegan)
 
-#@title # Model
+# @title # Model
 model = None
-#@markdown ## AEGAN
-use_aegan = True #@param {type:"boolean"}
+# @markdown ## AEGAN
+use_aegan = True  # @param {type:"boolean"}
 if use_aegan:
-    image_shape = (64,64,3) #@param
-    latentspace = 16#@param {type:"integer"}
-    batch_size = 32 #@param {type:"integer"}
-    noise_generating_function = lambda b: tf.random.normal((b, latentspace))  #@param {type:"raw"}
-    continue_from_saved_models = True #@param {type:"boolean"}
-    path = "./outputs/models/" #@param ["./models"] {allow-input: true}
+    image_shape = (64, 64, 3)  # @param
+    latentspace = 16  # @param {type:"integer"}
+    batch_size = 32  # @param {type:"integer"}
+    noise_generating_function = lambda b: tf.random.normal((b, latentspace))  # @param {type:"raw"}
+    continue_from_saved_models = True  # @param {type:"boolean"}
+    path = "./outputs/models/"  # @param ["./models"] {allow-input: true}
 
     batch_size *= 8
 
@@ -46,13 +46,12 @@ if use_aegan:
         path=path
     )
 
-#@title ## Data Settings
+# @title ## Data Settings
 
-image_path = "./preprocessing/data64/" #@param {type:"string"}
-images_in_test_split = 16 #@param {type:"slider", min:4, max:20, step:4}
-horizontal_flip = False #@param {type:"boolean"}
-shuffle = True #@param {type:"boolean"}
-
+image_path = "./preprocessing/data64/"  # @param {type:"string"}
+images_in_test_split = 16  # @param {type:"slider", min:4, max:20, step:4}
+horizontal_flip = False  # @param {type:"boolean"}
+shuffle = True  # @param {type:"boolean"}
 
 data = DataGenerator(
     img_path=image_path,
@@ -98,18 +97,18 @@ data = DataGenerator(
 #     data=data
 # )
 
-#@title # Training Parameters
-epochs = 4 #@param {type:"integer"}
-samples_per_epoch = 5 #@param {type:"integer"}
-print_verbose = "progressbar" #@param ["no_prints", "print_after_each_epoch", "progressbar"]
+# @title # Training Parameters
+epochs = 4  # @param {type:"integer"}
+samples_per_epoch = 5  # @param {type:"integer"}
+print_verbose = "progressbar"  # @param ["no_prints", "print_after_each_epoch", "progressbar"]
 print_verbose = {"no_prints": 0, "print_after_each_epoch": 2, "progressbar": 1}[print_verbose]
 
-#@markdown ## Callbacks
-#@markdown ### Model saving
+# @markdown ## Callbacks
+# @markdown ### Model saving
 callbacks = []
-save_models = False #@param {type:"boolean"}
+save_models = False  # @param {type:"boolean"}
 if save_models:
-    model_path = "./outputs/models/aegan{epoch:03d}.h5" #@param ["./outputs/models/"] {allow-input: true}
+    model_path = "./outputs/models/aegan{epoch:03d}.h5"  # @param ["./outputs/models/"] {allow-input: true}
 
     callbacks.append(
         tf.keras.callbacks.ModelCheckpoint(
@@ -118,13 +117,13 @@ if save_models:
         )
     )
 
-#@markdown ### Tensorboard
-use_tensorboard = False #@param {type:"boolean"}
+# @markdown ### Tensorboard
+use_tensorboard = False  # @param {type:"boolean"}
 log_dir = None
 timestemp = datetime.now().strftime("%Y%m%d_%H%M%S")
 if use_tensorboard:
-    log_dir = "./logs/images" #@param ["./logs"] {allow-input: true}
-    update_frequency = "epoch" #@param ["batch", "epoch"] {allow-input: true}
+    log_dir = "./logs/images"  # @param ["./logs"] {allow-input: true}
+    update_frequency = "epoch"  # @param ["batch", "epoch"] {allow-input: true}
 
     log_dir += ('' if log_dir.endswith('/') else '/') + timestemp
 
@@ -137,24 +136,26 @@ if use_tensorboard:
         )
     )
 
+
     def launchTensorBoard():
         import os
         os.system('tensorboard --logdir=' + log_dir)
         return
+
 
     import threading
 
     t = threading.Thread(target=launchTensorBoard, args=([]))
     t.start()
 
-#@markdown ### Save Pictures and Images for AEGAN
-#@markdown Images will be saved to file and displayed in tensorboard if activated.
-#@markdown The number of images equals to the amount of pictrures specified in the validation data split.
-save_pictures = True #@param {type:"boolean"}
+# @markdown ### Save Pictures and Weights for AEGAN
+# @markdown Images will be saved to file and displayed in tensorboard if activated.
+# @markdown The number of images equals to the amount of pictures specified in the validation data split.
+save_pictures = True  # @param {type:"boolean"}
 if save_pictures:
-    pictures_path = "./outputs/" #@param ["./output/"] {allow-input: true}
-    save_pictures_every = 4 #@param {type:"integer"}
-    save_model_every = 2 #@param {type:"integer"}
+    pictures_path = "./outputs/"  # @param ["./output/"] {allow-input: true}
+    save_pictures_every = 4  # @param {type:"integer"}
+    save_model_every = 2  # @param {type:"integer"}
 
     callbacks.append(
         SaveAegan(
@@ -166,11 +167,11 @@ if save_pictures:
         )
     )
 
-#@markdown ### Save History to csv
-#@markdown The name will be generated automatically so you only need to specify the path where it should be saved.
-save_history = True  #@param {type:"boolean}
+# @markdown ### Save History to csv
+# @markdown The name will be generated automatically so you only need to specify the path where it should be saved.
+save_history = True  # @param {type:"boolean}
 if save_history:
-    history_path = "./outputs/history"  #@param ["./outputs/history"] {allow-input: true}
+    history_path = "./outputs/history"  # @param ["./outputs/history"] {allow-input: true}
     history_path = utils.setup_path(history_path)
     callbacks.append(
         tf.keras.callbacks.CSVLogger(
@@ -179,7 +180,8 @@ if save_history:
         )
     )
 
-assert model is not None, "Model must not be None, please make sure to enable one of them by setting the respective bool to True!"
+assert model is not None, "Model must not be None, please make sure to enable one of them by setting the respective " \
+                          "bool to True! "
 print("Start training..")
 model.fit(
     x=data.training_generator,
