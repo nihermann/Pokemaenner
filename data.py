@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import os
-import matplotlib.pyplot as plt
+from utils import setup_path
 
 
 class DataGenerator:
@@ -20,13 +20,14 @@ class DataGenerator:
         :param batch_size: int - default 32
         :param img_height: int - default 256 (changes the image size if it doesn't fit)
         :param img_width: int - default 256 (changes the image size if it doesn't fit)
-        :param validation_split: float - procentual number to take from the original dataset and make it into a validation one (default 0.1)
+        :param validation_split: float - percentual number to take from the original dataset and make it into a validation one (default 0.1)
         """
-        self.img_path = img_path
+        self.img_path = setup_path(img_path)
         self.batch_size = batch_size
         self.img_size = img_size
         self.images_in_test_split = images_in_test_split
-        self.validation_split = images_in_test_split/len(os.listdir(img_path+"/data"))
+        self.n = len(os.listdir(self.img_path+"data"))
+        self.validation_split = images_in_test_split/self.n
         self.horizontal_flip = horizontal_flip
         self.shuffle = shuffle
 
@@ -36,7 +37,7 @@ class DataGenerator:
     def _get_image_generator(self, training_subset=False):
         return ImageDataGenerator(
             preprocessing_function=lambda img: tf.cast(2*(img/255)-1, tf.float32),
-            validation_split=self.validation_split,
+            validation_split=(self.n % self.batch_size)/self.n if training_subset else self.validation_split,
             horizontal_flip=self.horizontal_flip and training_subset  # only augment if its the trainings subset
         ).flow_from_directory(
             directory=self.img_path,
@@ -93,11 +94,12 @@ class DataGenerator:
 
 if __name__ == "__main__":
     from utils import save_images
-    data = DataGenerator("./preprocessing/data128", images_in_test_split=20, shuffle=True)
+    data = DataGenerator("./preprocessing/data64", batch_size=32*8, images_in_test_split=20, shuffle=True)
     print(type(data.validation_generator))
-    for i, img in enumerate(data.validation_generator):
-        save_images(img, "./test/", str(i)+"_")
-        if i == 4:
+    for i, img in enumerate(data.training_generator):
+        if img.shape[0] != 256:
+            print("Fail")
+        if i == 30000:
             break
 
 
