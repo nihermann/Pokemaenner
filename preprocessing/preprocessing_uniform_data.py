@@ -198,7 +198,7 @@ def uniform(image_path, image_height = 128, image_width=128):
         make_png(image_path)
         try:
             # uniform the size and the transparency
-            resize_and_convert(image_path,image_height,image_width)
+            resize_and_convert(image_path, image_height, image_width)
         except:
             resize_and_save(image_path)
         # uniform the backgrounds
@@ -209,9 +209,9 @@ def uniform(image_path, image_height = 128, image_width=128):
 if __name__ == "__main__":
     #get all the needed paths
     current = os.getcwd()
-    images = os.listdir("data_test")
+    images = os.listdir("./images")
 
     for image in images:
-        image_path = os.path.join("data_test", image)
-
-        uniform(image_path)
+        image_path = os.path.join("./images", image)
+        uniform(image_path, 64, 64)
+    print("Done")

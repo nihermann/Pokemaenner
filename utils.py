@@ -23,7 +23,7 @@ def save_images(images, save_to="", prefix=""):
 
         # take the nano secs as id. We exclude the last two numbers as they are always 0
         # and the first ones as they stay mostly the same.
-        current_time = int(time_ns() / 100) % 10000
+        current_time = int(time_ns() / 100) % 100000
 
         tf.io.write_file(  # save to dir with prefix and nano sec id.
             filename=save_to + prefix + str(current_time) + ".png",
@@ -73,6 +73,13 @@ def setup_path(path: str, optional_join: str = None):
 def transfer_method(method_name: str, from_A, to_B):
     method = getattr(from_A, method_name)
     setattr(to_B, method_name, types.MethodType(method, to_B))
+
+
+def remainder_is_0(counter, frequency):
+    try:
+        return counter % frequency == 0
+    except ZeroDivisionError:
+        return False
 
 
 if __name__ == "__main__":

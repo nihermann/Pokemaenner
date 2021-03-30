@@ -32,7 +32,7 @@ if use_aegan:
     latentspace = 16  # @param {type:"integer"}
     batch_size = 32  # @param {type:"integer"}
     noise_generating_function = lambda b: tf.random.normal((b, latentspace))  # @param {type:"raw"}
-    continue_from_saved_models = True  # @param {type:"boolean"}
+    continue_from_saved_models = False  # @param {type:"boolean"}
     path = "./outputs/models/"  # @param ["./models"] {allow-input: true}
 
     batch_size *= 8
@@ -49,7 +49,7 @@ if use_aegan:
 # @title ## Data Settings
 
 image_path = "./preprocessing/data64/"  # @param {type:"string"}
-images_in_test_split = 16  # @param {type:"slider", min:4, max:20, step:4}
+images_in_test_split = 20  # @param {type:"slider", min:4, max:20, step:4}
 horizontal_flip = False  # @param {type:"boolean"}
 shuffle = True  # @param {type:"boolean"}
 
@@ -98,8 +98,8 @@ data = DataGenerator(
 # )
 
 # @title # Training Parameters
-epochs = 4  # @param {type:"integer"}
-samples_per_epoch = 5  # @param {type:"integer"}
+epochs = 200  # @param {type:"integer"}
+samples_per_epoch = 100  # @param {type:"integer"}
 print_verbose = "progressbar"  # @param ["no_prints", "print_after_each_epoch", "progressbar"]
 print_verbose = {"no_prints": 0, "print_after_each_epoch": 2, "progressbar": 1}[print_verbose]
 
@@ -154,8 +154,8 @@ if use_tensorboard:
 save_pictures = True  # @param {type:"boolean"}
 if save_pictures:
     pictures_path = "./outputs/"  # @param ["./output/"] {allow-input: true}
-    save_pictures_every = 4  # @param {type:"integer"}
-    save_model_every = 2  # @param {type:"integer"}
+    save_pictures_every = 2  # @param {type:"integer"}
+    save_model_every = 4  # @param {type:"integer"}
 
     callbacks.append(
         SaveAegan(
@@ -181,7 +181,7 @@ if save_history:
     )
 
 assert model is not None, "Model must not be None, please make sure to enable one of them by setting the respective " \
-                          "bool to True! "
+                          "bool to True!"
 print("Start training..")
 model.fit(
     x=data.training_generator,

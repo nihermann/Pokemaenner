@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.metrics import Mean
 import os
 import models
-from utils import (to_grid, save_images, setup_path, transfer_method)
+from utils import (to_grid, save_images, setup_path, transfer_method, remainder_is_0)
 from contextlib import suppress
 import re
 
@@ -17,9 +17,25 @@ class AEGAN(tf.keras.Model):
             continue_from_saved_models=False,
             path="./models"
     ):
+        """
+        This AEGAN class in itself is an empty keras Model but it holds five functional models as attributes:
+        *Important* - In each training step the AEGAN needs eight batches of images, so make sure to supply an eight times bigger batch than you intended to use in training.
+        Generator(Decoder): Is used in two ways. (1) to generate images and (2) to be part of an autoencoder.
+        Encoder: Together with the Generator it forms an autoencoder.
+        Image Discriminator: Which is trained to predict the realness of a given image.
+        Latent Discriminator: Which is used measure judge the realness of a given latent vector.
+        AEGAN: The AEGAN is composed of the a.m. although the two Discriminators are decoupled and are constant throughout the AEGAN training.
+
+        :param image_shape: tuple - specifying the shape of the images w/o the batch size dimension. It has to match the supplied images.
+        :param latentspace: int - non negative int specifying the dimensionality of the embedding.
+        :param batch_size: int - non negative int which has to be eight times bigger than you want in to be during training.
+        :param noise_generating_fn: function - which has one argument specifying the number of the batch size dimension d and returns a noise vector with shape (d, latentspace).
+        :param continue_from_saved_models: bool - if True it will search in 'path' for weights for every model and start training from this state on.
+        :param path: str - where the weights can be found.
+        """
         super(AEGAN, self).__init__()
-        self.compile()
-        self._initialize_metrics()
+        self.compile()  # empty compilation
+        self._initialize_metrics()  # initializes all metrics which are needed
 
         assert batch_size % 8 == 0, "batch size needs to be divisible by 8 with no remainder."
 
@@ -115,7 +131,6 @@ class AEGAN(tf.keras.Model):
                 print(model, end=" ::: ")
                 self.discriminator_image.load_weights(os.path.join(path, model))
 
-
         if num_loaded != 4:
             print("\nLoading models was unsuccessful... new models are created...")
         else:
@@ -125,10 +140,12 @@ class AEGAN(tf.keras.Model):
     def _build_aegan(self):
         self.discriminator_image.trainable = False
         self.discriminator_latent.trainable = False
+
         input_image_shape = self.encoder.input_shape[1:]
         try:
             input_latent_shape = self.generator.input_shape[1:]
         except AttributeError:
+            print("Caught AttributeError while extracting the input shape")
             input_latent_shape = self.noise_generating_fn(1).shape[1:]
 
         # image path
@@ -149,12 +166,15 @@ class AEGAN(tf.keras.Model):
 
         prediction_reconstructed_embedding = self.discriminator_latent(reconstructed_latent_vector)
 
-        return tf.keras.Model([real_img, real_z], [reconstructed_real_img,
-                                                   reconstructed_latent_vector,
-                                                   prediction_fake_img,
-                                                   prediction_reconstructed_img,
-                                                   prediction_real_embedding,
-                                                   prediction_reconstructed_embedding], name="AEGAN")
+        aegan = tf.keras.Model([real_img, real_z], [reconstructed_real_img,
+                                                    reconstructed_latent_vector,
+                                                    prediction_fake_img,
+                                                    prediction_reconstructed_img,
+                                                    prediction_real_embedding,
+                                                    prediction_reconstructed_embedding], name="AEGAN")
+        self.discriminator_latent.trainable = True
+        self.discriminator_image.trainable = True
+        return aegan
 
     def _compile(self):
         self.discriminator_latent.compile(
@@ -233,6 +253,8 @@ class AEGAN(tf.keras.Model):
         )
         self.dis_latent_loss.update_state(dis_latent_loss / 4)
 
+        del data4, embedded_image, reconstructed_embedding, real_labels_d, fake_labels_d
+
         labels_g = tf.ones((self.batch_size, 1))
         for data in [data5, data6, data7, data8]:
             latent = self.noise_generating_fn(self.batch_size)
@@ -272,10 +294,10 @@ class AEGAN(tf.keras.Model):
         return self.aegan([data1, latent])
 
     def save_weights(self,
-                   filepath,
-                   overwrite=True,
-                   save_format=None,
-                   options=None):
+                     filepath,
+                     overwrite=True,
+                     save_format=None,
+                     options=None):
         self.encoder.save(filepath.format("encoder"), overwrite, save_format, options)
 
         self.generator.save(filepath.format("generator"), overwrite, save_format, options)
@@ -289,7 +311,8 @@ class AEGAN(tf.keras.Model):
 
 
 class SaveAegan(tf.keras.callbacks.Callback):
-    def __init__(self, save_images_every: int, save_model_every: int, save_path: str, data_gen, tensorboard_logdir=None):
+    def __init__(self, save_images_every: int, save_model_every: int, save_path: str, data_gen,
+                 tensorboard_logdir=None):
         super(SaveAegan, self).__init__()
         self.epoch = 0
         self.save_images_every = save_images_every
@@ -306,29 +329,22 @@ class SaveAegan(tf.keras.callbacks.Callback):
             tensorboard_logdir + '/reconstructed_images') if tensorboard_logdir is not None else None
 
     def save(self, images, prefix):
-        """
-
-        :param images:
-        :param prefix:
-        :return:
-        """
         grid = to_grid(images, 10)
         save_images(grid, save_to=self.image_save_path, prefix=prefix)
         return grid
 
     def make_and_write_images(self, epoch, logs, suffix=""):
         imgs = self.get_test_images()
-        generated_imgs = self.model.generate_images(imgs.shape[0])
-        gen_grid = self.save(generated_imgs, f"generated{epoch}_loss{logs['aegan_loss']}{suffix}_")
+        generated_imgs = self.model.generate_images(imgs.shape[0]*2)
+        gen_grid = self.save(generated_imgs, f"{epoch}generated_loss{logs['aegan_loss']: .4f}{suffix}_")
 
         reconstructed_imgs = self.model.autoencode_images(imgs)
-        reconstruction_loss = tf.keras.metrics.mean_squared_error(imgs, reconstructed_imgs)
+        reconstruction_loss = tf.keras.metrics.mean_absolute_error(imgs, reconstructed_imgs)
         reconstruction_loss = tf.reduce_mean(reconstruction_loss)
         combined = tf.stack([imgs, reconstructed_imgs], axis=0)
-        rec_grid = self.save(combined, f"reconstructed{epoch}_loss{reconstruction_loss}{suffix}_")
+        rec_grid = self.save(combined, f"{epoch}reconstructed_loss{reconstruction_loss: .4f}{suffix}_")
 
         if self.tbw_reconstructed_imgs is not None:
-            epoch = -1 if isinstance(epoch, str) else epoch
             with self.tbw_generated_imgs.as_default():
                 tf.summary.image("Generated Images", gen_grid, step=epoch)
             with self.tbw_reconstructed_imgs.as_default():
@@ -343,22 +359,18 @@ class SaveAegan(tf.keras.callbacks.Callback):
     def on_epoch_end(self, epoch, logs=None):
         self.epoch = epoch + 1
 
-        with suppress(ZeroDivisionError):
-            if self.epoch % self.save_images_every == 0:
-                self.make_and_write_images(self.epoch, logs)
+        if remainder_is_0(self.epoch, self.save_images_every):
+            self.make_and_write_images(self.epoch, logs)
 
-        with suppress(ZeroDivisionError):
-            if self.epoch % self.save_model_every == 0:
-                self.save_submodels(self.epoch)
+        if remainder_is_0(self.epoch, self.save_model_every):
+            self.save_submodels(self.epoch)
 
     def on_train_end(self, logs=None):
-        with suppress(ZeroDivisionError):
-            if self.epoch % self.save_images_every != 0:
-                self.make_and_write_images(self.epoch, logs, suffix="_F")
+        if not remainder_is_0(self.epoch, self.save_images_every):
+            self.make_and_write_images(self.epoch, logs, suffix="_F")
 
-        with suppress(ZeroDivisionError):
-            if self.epoch % self.save_model_every != 0:
-                self.save_submodels(self.epoch, suffix="_F")
+        if not remainder_is_0(self.epoch, self.save_model_every):
+            self.save_submodels(self.epoch, suffix="_F")
 
 
 if __name__ == '__main__':
