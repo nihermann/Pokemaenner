@@ -1,5 +1,6 @@
 import tensorflow as tf
 from time import time_ns
+import types
 import os
 
 
@@ -59,6 +60,19 @@ def to_grid(images, border):
         grid = tf.concat([grid, col], axis=1)
 
     return tf.expand_dims(grid, axis=0)
+
+
+def setup_path(path: str, optional_join: str = None):
+    path = path if path.endswith('/') else path + '/'
+    if optional_join:
+        path = os.path.join(path, optional_join)
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def transfer_method(method_name: str, from_A, to_B):
+    method = getattr(from_A, method_name)
+    setattr(to_B, method_name, types.MethodType(method, to_B))
 
 
 if __name__ == "__main__":
