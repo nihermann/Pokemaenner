@@ -10,6 +10,7 @@ pictures/
 __pycache__/
 logs/
 models/
+test.py
 
 # C extensions
 *.so
