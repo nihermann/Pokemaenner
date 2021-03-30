@@ -19,8 +19,8 @@ Original file is located at
 #@title # Using Gan to create new Pokemon
 from datetime import datetime
 import tensorflow as tf
+import utils
 from data import DataGenerator
-import gan
 from aegan import (AEGAN, SaveAegan)
 
 #@title # Model
@@ -121,11 +121,11 @@ if save_models:
 #@markdown ### Tensorboard
 use_tensorboard = False #@param {type:"boolean"}
 log_dir = None
+timestemp = datetime.now().strftime("%Y%m%d_%H%M%S")
 if use_tensorboard:
     log_dir = "./logs/images" #@param ["./logs"] {allow-input: true}
     update_frequency = "epoch" #@param ["batch", "epoch"] {allow-input: true}
 
-    timestemp = datetime.now().strftime("%Y%m%d-%H%M%S")
     log_dir += ('' if log_dir.endswith('/') else '/') + timestemp
 
     print(f"TensorBoard logdir: {log_dir}")
@@ -153,8 +153,8 @@ if use_tensorboard:
 save_pictures = True #@param {type:"boolean"}
 if save_pictures:
     pictures_path = "./outputs/" #@param ["./output/"] {allow-input: true}
-    save_pictures_every = 2 #@param {type:"integer"}
-    save_model_every = 3 #@param {type:"integer"}
+    save_pictures_every = 4 #@param {type:"integer"}
+    save_model_every = 2 #@param {type:"integer"}
 
     callbacks.append(
         SaveAegan(
@@ -166,8 +166,20 @@ if save_pictures:
         )
     )
 
+#@markdown ### Save History to csv
+#@markdown The name will be generated automatically so you only need to specify the path where it should be saved.
+save_history = True  #@param {type:"boolean}
+if save_history:
+    history_path = "./outputs/history"  #@param ["./outputs/history"] {allow-input: true}
+    history_path = utils.setup_path(history_path)
+    callbacks.append(
+        tf.keras.callbacks.CSVLogger(
+            history_path + f"model_history_log_{timestemp}.csv",
+            append=True
+        )
+    )
+
 assert model is not None, "Model must not be None, please make sure to enable one of them by setting the respective bool to True!"
-# model = tf.keras.models.load_model("./outputs/models")
 print("Start training..")
 model.fit(
     x=data.training_generator,
