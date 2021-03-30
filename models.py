@@ -96,7 +96,6 @@ class Decoder(tf.keras.Model):
         :param output_activation: string - which activation is used in the output layer. Default: 'tanh'
         :param kwargs: additional kwargs for the Model super class.
         """
-        self.start_shape = (None, latentspace)
         self.channels = default_value([256, 128, 128, 64, 64, 3], channels)
         self.kernel_widths = default_value([4, 4, 4, 4, 4, 4], kernel_widths)
         self.strides = default_value([1, 1, 1, 1, 1, 1], strides)
@@ -107,63 +106,42 @@ class Decoder(tf.keras.Model):
         h_Activation = lambda activation: LeakyReLU(0.02) if activation == "leaky_relu" else Activation(activation)
         initializer = tf.keras.initializers.RandomNormal(0, 0.02)
 
-        # inp, out = self._build_generator(latentspace, first_reshape_shape, self.channels, self.kernel_widths, self.strides, self.up_sampling, hidden_activation, output_activation)
-        super(Decoder, self).__init__(**kwargs)
+        inp = Input((latentspace,))
 
+        # A Block
+        A = Dense(np.prod(first_reshape_shape), kernel_initializer=initializer)(inp)
+        A = LayerNormalization()(A)
+        A = h_Activation(hidden_activation)(A)
+        A = Reshape(first_reshape_shape)(A)
 
-        self.layers_A = [
-            Dense(np.prod(first_reshape_shape), kernel_initializer=initializer),
-            LayerNormalization(),
-            h_Activation(hidden_activation),
-            Reshape(first_reshape_shape)
-        ]
+        # B Block
+        B = Dense(64)(inp)
+        B = LayerNormalization()(B)
+        B = h_Activation(hidden_activation)(B)
+        B = Reshape((1, 1, 64))(B)
+        B = UpSampling2D(first_reshape_shape[0])(B)
 
-        self.layers_B = [
-            Dense(64),
-            LayerNormalization(),
-            h_Activation(hidden_activation),
-            Reshape((1, 1, 64)),
-            UpSampling2D(first_reshape_shape[0])
-        ]
-
-        self.layer_blocks = []
         for channel, kernel_width, stride, up in zip(self.channels[:-1], self.kernel_widths[:-1], self.strides[:-1],
                                                      self.up_sampling[:-1]):
-            self.layer_blocks.append([
-                Concatenate(),
-                UpSampling2D(up),
-                UpSampling2D(up),
-                Conv2D(channel, kernel_width, stride,
-                       padding="same", kernel_initializer=initializer),
-                LayerNormalization(),
-                h_Activation(hidden_activation)
-            ])
+            A, B = up_sampling_block(
+                A, B,
+                channel,
+                kernel_width,
+                stride,
+                up,
+                h_Activation(hidden_activation),
+                initializer
+            )
 
-        self.last_concat = Concatenate()
-        self.last_Conv2D = Conv2D(self.channels[-1], self.kernel_widths[-1], self.strides[-1],
-                                  padding="same", kernel_initializer=initializer)
-        self.last_activation = Activation(self.output_activation)
+        A = Concatenate()([A, B])
+        A = Conv2D(self.channels[-1], self.kernel_widths[-1], self.strides[-1],
+                   padding="same", kernel_initializer=initializer)(A)
+        out = Activation(self.output_activation)(A)
+
+        super(Decoder, self).__init__(inp, out, **kwargs)
 
         self.build((None, latentspace))
 
-    # def _build_generator(self,
-    #                    latent_dim,
-    #                    starting_shape=None,
-    #                    channels=None,
-    #                    kernel_widths=None,
-    #                    strides=None,
-    #                    upsampling=None,
-    #                    hidden_activation='relu',
-    #                    output_activation='tanh',
-    #                    init=tf.keras.initializers.RandomNormal(mean=0, stddev=0.02)):
-    #     """Build a model that maps a latent space to images."""
-    #
-    #     if not (len(channels) == len(kernel_widths)
-    #             and len(kernel_widths) == len(strides)):
-    #         raise ValueError("channels, kernel_widths, strides must have equal"
-    #                          f" length; got {len(channels)},"
-    #                          f"{len(kernel_widths)}, {len(strides)}")
-    #
     #     input_layer = Input((latent_dim,))
     #     X = Dense(np.prod(starting_shape),
     #               kernel_initializer=init)(input_layer)
@@ -203,30 +181,41 @@ class Decoder(tf.keras.Model):
     #
     #     return input_layer, output_layer
 
-    @tf.function
-    def call(self, inputs):
-        a = tf.identity(inputs)
-        b = tf.identity(inputs)
-        for a_layer in self.layers_A:
-            a = a_layer(a)  # Out 4x4x64 A
+    # @tf.function
+    # def call(self, inputs):
+    #     a = tf.identity(inputs)
+    #     b = tf.identity(inputs)
+    #     for a_layer in self.layers_A:
+    #         a = a_layer(a)  # Out 4x4x64 A
+    #
+    #     for b_layer in self.layers_B:
+    #         b = b_layer(b)  # out 4x4x64 B
+    #
+    #     # Up sampling with skip connection B
+    #     for block in self.layer_blocks:
+    #         a = block[0]([a, b])  # Concatenate A&B
+    #         a = block[1](a)  # UpSampling2D A
+    #         b = block[2](b)  # UpSampling2D B
+    #         a = block[3](a)  # Conv2D A
+    #         a = block[4](a)  # LayerNormalization A
+    #         a = block[5](a)  # Activation A
+    #
+    #     a = self.last_concat([a, b])
+    #     a = self.last_Conv2D(a)
+    #     a = self.last_activation(a)
+    #
+    #     return a
 
-        for b_layer in self.layers_B:
-            b = b_layer(b)  # out 4x4x64 B
 
-        # Up sampling with skip connection B
-        for block in self.layer_blocks:
-            a = block[0]([a, b])  # Concatenate A&B
-            a = block[1](a)  # UpSampling2D A
-            b = block[2](b)  # UpSampling2D B
-            a = block[3](a)  # Conv2D A
-            a = block[4](a)  # LayerNormalization A
-            a = block[5](a)  # Activation A
-
-        a = self.last_concat([a, b])
-        a = self.last_Conv2D(a)
-        a = self.last_activation(a)
-
-        return a
+def up_sampling_block(A, B, channel, kernel_width, stride, up, hidden_activation, initializer):
+    A = Concatenate()([A, B])
+    A = UpSampling2D(up)(A)
+    B = UpSampling2D(up)(B)
+    A = Conv2D(channel, kernel_width, stride,
+               padding="same", kernel_initializer=initializer)(A)
+    A = LayerNormalization()(A)
+    A = hidden_activation(A)
+    return A, B
 
 
 class DiscriminatorLatent(tf.keras.Model):
@@ -250,34 +239,29 @@ class DiscriminatorLatent(tf.keras.Model):
         :param add_noise: bool - weather to apply noise to the layers computations.
         :param kwargs: further keyword arguments for the Model superclass.
         """
-        super(DiscriminatorLatent, self).__init__(**kwargs)
         h_Activation = lambda activation: LeakyReLU(0.02) if activation == "leaky_relu" else Activation(activation)
 
-        self.layer_list = []
+        inp = Input((latentspace,))
+        x = inp
         if add_noise:
-            self.layer_list.append(GaussianNoise(0.01, input_shape=(latentspace,)))
-        self.layer_list += [
-            DenseBlock(
+            x = GaussianNoise(0.01)(x)
+
+        for _ in range(num_blocks):
+            x = dense_block(
+                x,
                 neurons_per_layer,
                 h_Activation(hidden_activation),
                 add_noise
-            ) for _ in range(num_blocks)
-        ]
+            )
 
-        self.layer_list += [
-            Dense(128),
-            h_Activation(hidden_activation),
-            Dense(1),
-            Activation(output_activation)
-        ]
+        x = Dense(128)(x)
+        x = h_Activation(hidden_activation)(x)
+        x = Dense(1)(x)
+        out = Activation(output_activation)(x)
+
+        super(DiscriminatorLatent, self).__init__(inp, out, **kwargs)
 
         self.build((None, latentspace))
-
-    @tf.function
-    def call(self, inputs):
-        for layer in self.layer_list:
-            inputs = layer(inputs)
-        return inputs
 
     def forward_step(self, x, target):
         with tf.GradientTape() as tape:
@@ -290,23 +274,34 @@ class DiscriminatorLatent(tf.keras.Model):
         return loss
 
 
-class DenseBlock(tf.keras.Model):
-    def __init__(self, neurons_per_layer, hidden_activation_fn, add_noise=True):
-        super(DenseBlock, self).__init__()
+def dense_block(X, neurons_per_layer, hidden_activation, add_noise=True):
+    Y = Dense(neurons_per_layer)(X)
 
-        self.block = [Dense(neurons_per_layer)]
-        if add_noise:
-            self.block.append(GaussianNoise(0.005))
-        self.block.append(LayerNormalization())
-        self.block.append(hidden_activation_fn)
-        self.concat = Concatenate()
+    if add_noise:
+        Y = GaussianNoise(0.005)(Y)
 
-    @tf.function
-    def call(self, inputs):
-        x = tf.identity(inputs)
-        for layer in self.block:
-            x = layer(x)
-        return self.concat([inputs, x])
+    Y = LayerNormalization()(Y)
+    Y = hidden_activation(Y)
+    return Concatenate()([X, Y])
+
+
+# class DenseBlock(tf.keras.Model):
+#     def __init__(self, neurons_per_layer, hidden_activation_fn, add_noise=True):
+#         super(DenseBlock, self).__init__()
+#
+#         self.block = [Dense(neurons_per_layer)]
+#         if add_noise:
+#             self.block.append(GaussianNoise(0.005))
+#         self.block.append(LayerNormalization())
+#         self.block.append(hidden_activation_fn)
+#         self.concat = Concatenate()
+#
+#     @tf.function
+#     def call(self, inputs):
+#         x = tf.identity(inputs)
+#         for layer in self.block:
+#             x = layer(x)
+#         return self.concat([inputs, x])
 
 
 # class Autoencoder(tf.keras.Model):
@@ -344,6 +339,7 @@ class DenseBlock(tf.keras.Model):
 if __name__ == "__main__":
     img = tf.ones((1, 10))
     dec = Decoder(10, [4, 4, 64])
+    # dec = Decoder
     dec(img)
     dec.summary()
     # enc = Encoder((64, 64, 3), 10)
@@ -353,6 +349,6 @@ if __name__ == "__main__":
     # d_latent = build_discriminator_latent(10, 16, 16, "leaky_relu")
     # d_latent = DiscriminatorLatent(10)
     # print("encoder" in dir(a))
-    # tf.keras.utils.plot_model(d_latent, "Discriminator_latent.png", show_shapes=True)
+    # tf.keras.utils.plot_model(dec, "Decoder.png", show_shapes=True)
     # print(a.encode_images(img))
     # print(a.predict(img))
