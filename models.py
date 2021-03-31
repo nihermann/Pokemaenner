@@ -8,6 +8,18 @@ tf.keras.backend.set_floatx('float32')
 
 
 def conv2d_block(X, channel, kernel_width, stride, initializer, add_noise, hidden_activation):
+    """
+    A Conv2D block for a functional Model. Implements the following layers:
+    Conv2D, (optional) GaussianNoise(0.01), LayerNormalization, hidden_activation.
+    :param X: The variable tracking the forward step.
+    :param channel: int - Amount of channels made by the Conv2D.
+    :param kernel_width: int - width of the Conv2Ds kernel.
+    :param stride: int - specifying the strides argument of the Conv2D.
+    :param initializer: an initializer which will be passed to the kernel_initializer argument of the Conv2D.
+    :param add_noise: bool - whether a Gaussian Noise layer is applied between the Conv2D and the activation function.
+    :param hidden_activation: an instance of an activation function.
+    :return: X, the parameter tracking the models forward step.
+    """
     X = Conv2D(channel, kernel_width, stride, padding="same", kernel_initializer=initializer)(X)
     if add_noise:
         X = GaussianNoise(0.01)(X)
@@ -17,6 +29,18 @@ def conv2d_block(X, channel, kernel_width, stride, initializer, add_noise, hidde
 
 
 def up_sampling_block(A, B, up, channel, kernel_width, stride, initializer, hidden_activation):
+    """
+    An up sampling block used in generators.
+    :param A: Main up sampling branch tracker.
+    :param B: Skipping up sampling branch tracker.
+    :param up: The amount of up sampling applied.
+    :param channel: int - Amount of channels made by the Conv2D.
+    :param kernel_width: int - width of the Conv2Ds kernel.
+    :param stride: int - specifying the strides argument of the Conv2D.
+    :param initializer: an initializer which will be passed to the kernel_initializer argument of the Conv2D.
+    :param hidden_activation: an instance of an activation function.
+    :return: A, B
+    """
     A = Concatenate()([A, B])
     A = UpSampling2D(up)(A)
     B = UpSampling2D(up)(B)
@@ -28,6 +52,15 @@ def up_sampling_block(A, B, up, channel, kernel_width, stride, initializer, hidd
 
 
 def dense_block(X, neurons_per_layer, add_noise, hidden_activation):
+    """
+    A dense block for functional models. It applies the following layers.
+    Dense, (optional) GaussianNoise(0.005), LayerNormalization, hidden_activation, concat(input, result of block)
+    :param X: variable to track the models forward step.
+    :param neurons_per_layer: int - how many neurons the Dense layer should have.
+    :param add_noise: bool - whether to add the GaussianNoise(0.005) layer or not.
+    :param hidden_activation: an instance of an activation function.
+    :return: X
+    """
     Y = Dense(neurons_per_layer)(X)
 
     if add_noise:
@@ -81,7 +114,7 @@ class Encoder(tf.keras.Model):
                 X,
                 channel, kernel_width, stride, initializer,  # Conv2D
                 add_noise,  # Gaussian Noise with 0.01
-                #  Layer normalization
+                # Layer normalization
                 h_Activation(hidden_activation)  # Activation
             )  # returns X
 
