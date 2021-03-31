@@ -29,11 +29,12 @@ model = None
 use_aegan = True  # @param {type:"boolean"}
 if use_aegan:
     image_shape = (64, 64, 3)  # @param
-    latentspace = 16  # @param {type:"integer"}
+    latentspace = 24  # @param {type:"integer"}
     batch_size = 32  # @param {type:"integer"}
     noise_generating_function = lambda b: tf.random.normal((b, latentspace))  # @param {type:"raw"}
     continue_from_saved_models = False  # @param {type:"boolean"}
-    path = "./outputs/models/"  # @param ["./models"] {allow-input: true}
+    only_weights = False  # @param {type:"boolean"}
+    path = "./outputs/models"  # @param ["./models"] {allow-input: true}
 
     batch_size *= 8
 
@@ -43,6 +44,7 @@ if use_aegan:
         batch_size=batch_size,
         noise_generating_fn=noise_generating_function,
         continue_from_saved_models=continue_from_saved_models,
+        only_weights=only_weights,
         path=path
     )
 
@@ -62,60 +64,25 @@ data = DataGenerator(
     shuffle=shuffle
 )
 
-# #@title ## Hyperparameters
-
-
-# loss_function = "Binary Cross Entropy" #@param ["Binary Cross Entropy", "Mean Squared Error"]
-# optimizer = "Adam" #@param ["Adam", "RMSprop", "SGD"]
-# learning_rate = 0.001 #@param {type:"number"}
-
-
-# ## Dropdown equivalents
-# loss_functions = {
-#     "Binary Cross Entropy": tf.keras.losses.BinaryCrossentropy(),
-#     "Mean Squared Error": tf.keras.losses.MSE
-# }
-
-# optimizers = {
-#     "Adam": tf.keras.optimizers.Adam(learning_rate),
-#     "RMSprop": tf.keras.optimizers.RMSprop(learning_rate),
-#     "SGD": tf.keras.optimizers.SGD
-# }
-
-
-# ## Final
-# kwargs = {
-#     "batch_size": batch_size,
-#     "loss": loss_functions[loss_function],
-#     "optimizer": optimizers[optimizer]
-# }
-
-# manager = GANManager(
-#     kwargs=kwargs,
-#     generator=generator,
-#     discriminator=discriminator,
-#     data=data
-# )
-
 # @title # Training Parameters
 epochs = 200  # @param {type:"integer"}
 samples_per_epoch = 100  # @param {type:"integer"}
-print_verbose = "progressbar"  # @param ["no_prints", "print_after_each_epoch", "progressbar"]
+print_verbose = "print_after_each_epoch"  # @param ["no_prints", "print_after_each_epoch", "progressbar"]
 print_verbose = {"no_prints": 0, "print_after_each_epoch": 2, "progressbar": 1}[print_verbose]
 
 # @markdown ## Callbacks
 # @markdown ### Model saving
 callbacks = []
-save_models = False  # @param {type:"boolean"}
-if save_models:
-    model_path = "./outputs/models/aegan{epoch:03d}.h5"  # @param ["./outputs/models/"] {allow-input: true}
-
-    callbacks.append(
-        tf.keras.callbacks.ModelCheckpoint(
-            filepath=model_path,
-            save_weights_only=save_weights_only,
-        )
-    )
+# save_models = False  # @param {type:"boolean"}
+# if save_models:
+#     model_path = "./outputs/models/aegan{epoch:03d}.h5"  # @param ["./outputs/models/"] {allow-input: true}
+#
+#     callbacks.append(
+#         tf.keras.callbacks.ModelCheckpoint(
+#             filepath=model_path,
+#             save_weights_only=save_weights_only,
+#         )
+#     )
 
 # @markdown ### Tensorboard
 use_tensorboard = False  # @param {type:"boolean"}
@@ -151,16 +118,18 @@ if use_tensorboard:
 # @markdown ### Save Pictures and Weights for AEGAN
 # @markdown Images will be saved to file and displayed in tensorboard if activated.
 # @markdown The number of images equals to the amount of pictures specified in the validation data split.
-save_pictures = True  # @param {type:"boolean"}
-if save_pictures:
+save_aegan = True  # @param {type:"boolean"}
+if save_aegan:
     pictures_path = "./outputs/"  # @param ["./output/"] {allow-input: true}
-    save_pictures_every = 2  # @param {type:"integer"}
-    save_model_every = 4  # @param {type:"integer"}
+    save_pictures_every = 4  # @param {type:"integer"}
+    save_model_every = 10  # @param {type:"integer"}
+    save_only_weights = False  # @param {type:"boolean"}
 
     callbacks.append(
         SaveAegan(
             save_images_every=save_pictures_every,
             save_model_every=save_model_every,
+            only_weights=save_only_weights,
             save_path=pictures_path,
             data_gen=data.validation_generator,
             tensorboard_logdir=log_dir
@@ -175,7 +144,7 @@ if save_history:
     history_path = utils.setup_path(history_path)
     callbacks.append(
         tf.keras.callbacks.CSVLogger(
-            history_path + f"model_history_log_{timestemp}.csv",
+            history_path + f"aegan_64_b{batch_size//8}_l{latentspace}_s{samples_per_epoch}_history_log_{timestemp}.csv",
             append=True
         )
     )
