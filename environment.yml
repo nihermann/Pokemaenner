@@ -1,4 +1,4 @@
-name: drl
+name: pokemon
 channels:
   - defaults
 dependencies:
