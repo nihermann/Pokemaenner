@@ -10,19 +10,19 @@ tf.keras.backend.set_floatx('float32')
 def conv2d_block(X, channel, kernel_width, stride, initializer, add_noise, hidden_activation):
     """
     A Conv2D block for a functional Model. Implements the following layers:
-    Conv2D, (optional) GaussianNoise(0.01), LayerNormalization, hidden_activation.
+    Conv2D, (optional) GaussianDropout(0.005), LayerNormalization, hidden_activation.
     :param X: The variable tracking the forward step.
     :param channel: int - Amount of channels made by the Conv2D.
     :param kernel_width: int - width of the Conv2Ds kernel.
     :param stride: int - specifying the strides argument of the Conv2D.
     :param initializer: an initializer which will be passed to the kernel_initializer argument of the Conv2D.
-    :param add_noise: bool - whether a Gaussian Noise layer is applied between the Conv2D and the activation function.
+    :param add_noise: bool - whether a Gaussian Dropout is applied between the Conv2D and the Layer Normalization.
     :param hidden_activation: an instance of an activation function.
     :return: X, the parameter tracking the models forward step.
     """
     X = Conv2D(channel, kernel_width, stride, padding="same", kernel_initializer=initializer)(X)
     if add_noise:
-        X = GaussianNoise(0.01)(X)
+        X = GaussianDropout(0.005)(X)
     X = LayerNormalization()(X)
     X = hidden_activation(X)
     return X
@@ -54,17 +54,17 @@ def up_sampling_block(A, B, up, channel, kernel_width, stride, initializer, hidd
 def dense_block(X, neurons_per_layer, add_noise, hidden_activation):
     """
     A dense block for functional models. It applies the following layers.
-    Dense, (optional) GaussianNoise(0.005), LayerNormalization, hidden_activation, concat(input, result of block)
+    Dense, (optional) GaussianDropout(0.005), LayerNormalization, hidden_activation, concat(input, result of block)
     :param X: variable to track the models forward step.
     :param neurons_per_layer: int - how many neurons the Dense layer should have.
-    :param add_noise: bool - whether to add the GaussianNoise(0.005) layer or not.
+    :param add_noise: bool - whether to add the GaussianDropout(0.005) layer or not.
     :param hidden_activation: an instance of an activation function.
     :return: X
     """
     Y = Dense(neurons_per_layer)(X)
 
     if add_noise:
-        Y = GaussianNoise(0.005)(Y)
+        Y = GaussianDropout(0.005)(Y)
 
     Y = LayerNormalization()(Y)
     Y = hidden_activation(Y)
@@ -113,7 +113,7 @@ class Encoder(tf.keras.Model):
             X = conv2d_block(
                 X,
                 channel, kernel_width, stride, initializer,  # Conv2D
-                add_noise,  # Gaussian Noise with 0.01
+                add_noise,  # Gaussian Dropout with 0.005
                 # Layer normalization
                 h_Activation(hidden_activation)  # Activation
             )  # returns X

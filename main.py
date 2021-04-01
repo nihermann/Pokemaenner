@@ -32,8 +32,8 @@ if use_aegan:
     latentspace = 24  # @param {type:"integer"}
     batch_size = 32  # @param {type:"integer"}
     noise_generating_function = lambda b: tf.random.normal((b, latentspace))  # @param {type:"raw"}
-    continue_from_saved_models = False  # @param {type:"boolean"}
-    only_weights = False  # @param {type:"boolean"}
+    continue_from_saved_models = True  # @param {type:"boolean"}
+    only_weights = True  # @param {type:"boolean"}
     path = "./outputs/models"  # @param ["./models"] {allow-input: true}
 
     batch_size *= 8
@@ -67,7 +67,7 @@ data = DataGenerator(
 # @title # Training Parameters
 epochs = 200  # @param {type:"integer"}
 samples_per_epoch = 100  # @param {type:"integer"}
-print_verbose = "print_after_each_epoch"  # @param ["no_prints", "print_after_each_epoch", "progressbar"]
+print_verbose = "progressbar"  # @param ["no_prints", "print_after_each_epoch", "progressbar"]
 print_verbose = {"no_prints": 0, "print_after_each_epoch": 2, "progressbar": 1}[print_verbose]
 
 # @markdown ## Callbacks

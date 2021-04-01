@@ -72,7 +72,7 @@ class AEGAN(tf.keras.Model):
             self.discriminator_image = models.Encoder(
                 image_shape,
                 latentspace=1,
-                kernel_widths=[4, 4, 4, 4, 4, 4],
+                kernel_widths=[3, 3, 3, 3, 3, 3],
                 hidden_activation="leaky_relu",
                 output_activation="sigmoid",
                 name="image_discriminator"
@@ -83,7 +83,7 @@ class AEGAN(tf.keras.Model):
                 latentspace,
                 num_blocks=16,
                 neurons_per_layer=16,
-                hidden_activation="relu",
+                hidden_activation="leaky_relu",
                 output_activation="sigmoid",
                 name="latent_discriminator"
             )
