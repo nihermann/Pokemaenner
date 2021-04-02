@@ -13,7 +13,7 @@ def isint(value):
   except ValueError:
     return False
 
-def create_table(path, epoch = 0, padding = 0, images_per_row = 3, images_saved_per_epoch = 10, img_height = 64, process_till = 0):
+def create_table(path, epoch = 0, padding = 0, images_per_row = 3, images_saved_per_epoch = None, img_height = 64, process_till = 0):
     '''creates table with images of one epoch'''
     os.chdir(path)
 
@@ -21,6 +21,9 @@ def create_table(path, epoch = 0, padding = 0, images_per_row = 3, images_saved_
     frame_width = img_height*images_per_row
     epoch_file_start = epoch*images_saved_per_epoch
     images = images[epoch_file_start:epoch_file_start+(images_per_row*images_per_row)]          #get the first images_per_row*images_per_row images
+
+    if images_saved_per_epoch != None:
+        images = images[epoch_file_start:epoch_file_start+(math.sqrt(images_saved_per_epoch)*math.sqrt(images_saved_per_epoch))]          #get the first images_per_row*images_per_row images
 
     if process_till >= 1:
         images = sorted(glob.glob("*.png"), key=os.path.getmtime)          #get the first images_per_row*images_per_row images
@@ -69,7 +72,7 @@ def mark_with_epoch(img,epoch,img_size = 10):
     img.paste(epoch_number, (0, 0))
     return img
 
-def epoch_progress(path,start = 0, progress_jump_per_image = 5,  n_epochs = 45, epochs_per_row = 5, padding = 1, number_of_epochs = 10):
+def epoch_progress(path,start = 0, progress_jump_per_image = 5,  n_epochs = 45, epochs_per_row = 5, padding = 1, number_of_epochs = 10, images_per_row_epoch = 3):
     '''create table with multiple epochs each visualizing images from that specific epoch'''
     os.chdir(path)
     progress_name = f"progress_{start}_to_{n_epochs}"
@@ -81,12 +84,12 @@ def epoch_progress(path,start = 0, progress_jump_per_image = 5,  n_epochs = 45, 
     for epoch in range(start,n_epochs,progress_jump_per_image):
         #for each epoch create a table with its images
         print("current epoch",epoch)
-        epoch_img = create_table(path, epoch = epoch)
+        epoch_img = create_table(path, epoch = epoch, images_per_row = images_per_row_epoch)
         epoch_img = mark_with_epoch(epoch_img,epoch, img_size = 30) #mark the whole image with the current epoch
         epoch_img.save(f"{progress_name}/{epoch}.png", "PNG", quality=100, optimize=True, progressive=True) #save the image
 
     #create_table a table with every epoch in it
-    progress_table = create_table(os.path.join(path,progress_name), padding = padding,  images_per_row = epochs_per_row, img_height = 64*3, process_till = int(n_epochs/progress_jump_per_image) )
+    progress_table = create_table(os.path.join(path,progress_name), padding = padding,  images_per_row = epochs_per_row, img_height = 64*images_per_row_epoch, process_till = int(n_epochs/progress_jump_per_image) )
     progress_table.show()
     progress_table.save(progress_name+".png", "PNG", quality=100, optimize=True, progressive=True)
 
