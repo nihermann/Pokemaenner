@@ -6,15 +6,15 @@ from math import ceil, floor
 from PIL import Image, ImageDraw
 
 def isint(value):
-    '''checks wheter or not the given value (mostly for valid string testing) is translatable into an integer'''
+  # '''checks wheter or not the given value (mostly for valid string testing) is translatable into an integer'''
   try:
     int(value)
     return True
   except ValueError:
     return False
 
-def create_table(path, epoch = 0, padding = 0, images_per_row = 3, images_saved_per_epoch = None, img_height = 64, process_till = 0):
-    '''creates table with images of one epoch'''
+def create_table(path, epoch = 0, padding = 0, images_per_row = 3, images_saved_per_epoch = 10, img_height = 64, process_till = 0):
+    # '''creates table with images of one epoch'''
     os.chdir(path)
 
     images = sorted(glob.glob("*.png"))
@@ -22,7 +22,7 @@ def create_table(path, epoch = 0, padding = 0, images_per_row = 3, images_saved_
     epoch_file_start = epoch*images_saved_per_epoch
     images = images[epoch_file_start:epoch_file_start+(images_per_row*images_per_row)]          #get the first images_per_row*images_per_row images
 
-    if images_saved_per_epoch != None:
+    if images_saved_per_epoch != 10:
         images = images[epoch_file_start:epoch_file_start+(math.sqrt(images_saved_per_epoch)*math.sqrt(images_saved_per_epoch))]          #get the first images_per_row*images_per_row images
 
     if process_till >= 1:
@@ -58,7 +58,7 @@ def create_table(path, epoch = 0, padding = 0, images_per_row = 3, images_saved_
 
 
 def epoch_counter(epoch, color = (255,255,255) , img_size = 20):
-    '''make an image with the number of the current epoch'''
+    # '''make an image with the number of the current epoch'''
     img_width = len(str(epoch))*10
     img = Image.new('RGB', (img_width,10), color = color)
     d = ImageDraw.Draw(img)
@@ -67,13 +67,13 @@ def epoch_counter(epoch, color = (255,255,255) , img_size = 20):
     return img
 
 def mark_with_epoch(img,epoch,img_size = 10):
-    '''paste the current epoch onto the image'''
+    # '''paste the current epoch onto the image'''
     epoch_number = epoch_counter(epoch, img_size = 10)
     img.paste(epoch_number, (0, 0))
     return img
 
 def epoch_progress(path,start = 0, progress_jump_per_image = 5,  n_epochs = 45, epochs_per_row = 5, padding = 1, number_of_epochs = 10, images_per_row_epoch = 3):
-    '''create table with multiple epochs each visualizing images from that specific epoch'''
+    # '''create table with multiple epochs each visualizing images from that specific epoch'''
     os.chdir(path)
     progress_name = f"progress_{start}_to_{n_epochs}"
     try:
@@ -92,6 +92,7 @@ def epoch_progress(path,start = 0, progress_jump_per_image = 5,  n_epochs = 45, 
     progress_table = create_table(os.path.join(path,progress_name), padding = padding,  images_per_row = epochs_per_row, img_height = 64*images_per_row_epoch, process_till = int(n_epochs/progress_jump_per_image) )
     progress_table.show()
     progress_table.save(progress_name+".png", "PNG", quality=100, optimize=True, progressive=True)
+
 
 PATH = r"C:\Users\michi\Osnabrueck\3_Semester\Pokemaenner\results_GP-20210402T082031Z-001\results_GP"
 
