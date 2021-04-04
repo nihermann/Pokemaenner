@@ -4,6 +4,7 @@ import pandas as pd
 import re
 from PIL import Image
 
+
 def to_png():
     current = os.getcwd()
     image_data_path = os.path.join(current, "images")
@@ -45,6 +46,7 @@ def to_RGBA():
                         img2.save(complete_path, "PNG")
             except:
                 print("Failed", img_path)
+
 
 def main():
     # get the paths for the images, shapes and stats data

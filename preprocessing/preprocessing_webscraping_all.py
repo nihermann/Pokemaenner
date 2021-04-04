@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import os
-from preprocessing_uniform_data import uniform, resize, center_focus, resize_and_save
+from preprocessing_uniform_data import uniform, center_focus, resize_and_save
 import io
 import PIL
 from PIL import Image
@@ -63,12 +63,9 @@ def download(images):
 
 
 def imagedown(url, folder):
-    try:
-        folder = os.path.join(os.getcwd(), folder)
-        # making a directory by joining the current one with the given one
-        os.mkdir(folder)
-    except:
-        pass
+    folder = os.path.join(os.getcwd(), folder)
+    # making a directory by joining the current one with the given one
+    os.makedirs(folder, exist_ok=True)
     # change to the given folder and request the given url and parse its html
     os.chdir(folder)
 
@@ -110,12 +107,11 @@ if __name__ == "__main__":
             print(
                 f"Number of downloaded pokemon: {count}/903. Current pokemon: {pokemon.replace('https://pokemondb.net/pokedex/', '')}",
                 sep='', end="\r", flush=True)
-            print()
         except:
             # move to the original path
             path_parent = os.path.dirname(os.getcwd())
             os.chdir(path_parent)
-
+    print()  # clear \r from above print.
     images = os.listdir("data")
 
     # sometimes do to laggy internet it doesn't resize properly only do this if
@@ -124,10 +120,12 @@ if __name__ == "__main__":
         if "artwork" in image:
             resize_and_save(os.path.join(os.getcwd(), "data", image), 128, 128)
 
-    # for image in images:
-    #     image_path = os.path.join(os.getcwd(),"data", image)
-    #     try:
-    #         if "artwork" not in image and "sprite" in image:
-    #             center_focus(image_path)
-    #     except:
-    #         pass
+    for image in images:
+        image_path = os.path.join(os.getcwd(),"data", image)
+        try:
+            if "artwork" not in image and "sprite" in image:
+                center_focus(image_path)
+        except Exception as e:
+            print("Failed to center: ", image, "with exception", e)
+
+    remove_corrupted_images("data")
