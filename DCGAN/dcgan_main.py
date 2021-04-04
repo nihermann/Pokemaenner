@@ -8,7 +8,7 @@ import os
 if __name__ == '__main__':
 
     parent_path = os.path.dirname(os.getcwd())
-    MODEL_PATH = "models/dcgan_model"
+    MODEL_PATH = "models"
     IMG_PATH = os.path.join(parent_path, "preprocessing", "data")
     IMG_SAVE_PATH = "results/generated_img_{epoch}_{i}.png"
 
