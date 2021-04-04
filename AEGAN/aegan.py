@@ -1,8 +1,8 @@
 import tensorflow as tf
 from tensorflow.keras.metrics import Mean
 import os
-import models
-from utils import (to_grid, save_images, setup_path, transfer_method, remainder_is_0)
+import aegan_models
+from aegan_utils import (to_grid, save_images, setup_path, transfer_method, remainder_is_0)
 import re
 
 
@@ -51,7 +51,7 @@ class AEGAN(tf.keras.Model):
         message = "Build models: [{}]"
         if not loading_successful:
             print(message.format("...."), end="\r")
-            self.generator = models.Decoder(
+            self.generator = aegan_models.Decoder(
                 latentspace,
                 first_reshape_shape=[4, 4, 64],
                 hidden_activation="relu",
@@ -60,7 +60,7 @@ class AEGAN(tf.keras.Model):
             )
             print(message.format(">..."), end="\r")
 
-            self.encoder = models.Encoder(
+            self.encoder = aegan_models.Encoder(
                 image_shape,
                 latentspace,
                 hidden_activation="relu",
@@ -69,7 +69,7 @@ class AEGAN(tf.keras.Model):
             )
             print(message.format("=>.."), end="\r")
 
-            self.discriminator_image = models.Encoder(
+            self.discriminator_image = aegan_models.Encoder(
                 image_shape,
                 latentspace=1,
                 kernel_widths=[3, 3, 3, 3, 3, 3],
@@ -79,7 +79,7 @@ class AEGAN(tf.keras.Model):
             )
             print(message.format("==>."), end="\r")
 
-            self.discriminator_latent = models.DiscriminatorLatent(
+            self.discriminator_latent = aegan_models.DiscriminatorLatent(
                 latentspace,
                 num_blocks=16,
                 neurons_per_layer=16,
@@ -171,7 +171,7 @@ class AEGAN(tf.keras.Model):
                     self.encoder.load_weights(os.path.join(path, model))
                 else:
                     self.encoder = tf.keras.models.load_model(os.path.join(path, model), compile=False)
-                    transfer_method("forward_step", models.Encoder, self.encoder)
+                    transfer_method("forward_step", aegan_models.Encoder, self.encoder)
 
             elif not found_l and "discriminator_latent" in model:
                 found_l, num_loaded = True, num_loaded + 1
@@ -181,7 +181,7 @@ class AEGAN(tf.keras.Model):
                     self.discriminator_latent.load_weights(os.path.join(path, model))
                 else:
                     self.discriminator_latent = tf.keras.models.load_model(os.path.join(path, model), compile=False)
-                    transfer_method("forward_step", models.DiscriminatorLatent, self.discriminator_latent)
+                    transfer_method("forward_step", aegan_models.DiscriminatorLatent, self.discriminator_latent)
 
             elif not found_i and "discriminator_image" in model:
                 found_i, num_loaded = True, num_loaded + 1
@@ -191,7 +191,7 @@ class AEGAN(tf.keras.Model):
                     self.discriminator_image.load_weights(os.path.join(path, model))
                 else:
                     self.discriminator_image = tf.keras.models.load_model(os.path.join(path, model), compile=False)
-                    transfer_method("forward_step", models.Encoder, self.discriminator_image)
+                    transfer_method("forward_step", aegan_models.Encoder, self.discriminator_image)
 
         if num_loaded != 4:
             print(f"\nLoading {models_or_weights} was unsuccessful...",

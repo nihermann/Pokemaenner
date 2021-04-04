@@ -140,7 +140,7 @@ if __name__ == "__main__":
     # ones = tf.random.uniform((64, 28, 28, 3))
     # save_images(ones, "pics/", "hihi")
     # print("done")
-    from data import DataGenerator
+    from aegan_data import DataGenerator
 
     data = DataGenerator("./preprocessing/data128/", images_in_validation_split=20)
     d = data.validation_generator.next()

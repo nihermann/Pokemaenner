@@ -19,8 +19,8 @@ Original file is located at
 # @title # Using Gan to create new Pokemon
 from datetime import datetime
 import tensorflow as tf
-import utils
-from data import DataGenerator
+import aegan_utils
+from aegan_data import DataGenerator
 from aegan import (AEGAN, SaveAegan)
 
 # @title # Model
@@ -126,7 +126,7 @@ if save_aegan:
 save_history = True  # @param {type:"boolean"}
 if save_history:
     history_path = "./outputs/history"  # @param ["./outputs/history"] {allow-input: true}
-    history_path = utils.setup_path(history_path)
+    history_path = aegan_utils.setup_path(history_path)
     callbacks.append(
         tf.keras.callbacks.CSVLogger(
             history_path + f"aegan_64_b{batch_size//8}_l{latentspace}_s{samples_per_epoch}_history_log_{timestemp}.csv",

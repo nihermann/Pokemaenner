@@ -1,6 +1,7 @@
 from tensorflow import keras
 from tensorflow.keras import layers
 
+
 def upsample_block(
         x,
         filters,
@@ -14,10 +15,12 @@ def upsample_block(
         use_dropout=False,
         drop_value=0.3,
 ):
-    """Function implementing an upsample block which uses transposed convolution,
-       to tell wheter or not the activation of a pixel in a random sample.
-       :param use_bn = whether or not to use Batch normalization
-       :param use_dropout = whether or not to use DropOut"""
+    """
+    Function implementing an up sample block which uses transposed convolution,
+    to tell whether or not the activation of a pixel in a random sample.
+    :param use_bn = whether or not to use Batch normalization.
+    :param use_dropout = whether or not to use DropOut.
+    """
     x = layers.UpSampling2D(up_size)(x)
     x = layers.Conv2D(
         filters, kernel_size, strides=strides, padding=padding, use_bias=use_bias
@@ -32,7 +35,8 @@ def upsample_block(
         x = layers.Dropout(drop_value)(x)
     return x
 
-def get_generator_model(noise_dim = 128):
+
+def get_generator_model(noise_dim=128):
     noise = layers.Input(shape=(noise_dim,))
     x = layers.Dense(8 * 8 * 512, use_bias=False)(noise)
     x = layers.BatchNormalization()(x)
@@ -54,7 +58,7 @@ def get_generator_model(noise_dim = 128):
         256,
         layers.LeakyReLU(0.2),
         strides=(1, 1),
-        up_size = (1,1),
+        up_size=(1, 1),
         use_bias=False,
         use_bn=False,
         padding="same",

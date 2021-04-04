@@ -1,10 +1,12 @@
 from tensorflow import keras
 import tensorflow as tf
+
+
 class GANMonitor(keras.callbacks.Callback):
     def __init__(self, num_img=6, latent_dim=128, starter_count=0, img_path="results_all/generated_img_{epoch}_{i}.png",
-                 model=None, model_path="models/wgan_model", save_model_every = 3):
+                 model=None, model_path="models/wgan_model", save_model_every=3):
         """
-        Initiliazation of a Monitor for the gan managing what to do after an epoch (save model, pictures etc.)
+        Initialization of a Monitor for the gan managing what to do after an epoch (save model, pictures etc.)
         :param num_img = how many images to save per epoch
         :param latent_dim = size of latent space
         :param starter_count = number of epoch of last training session (where training was left off)

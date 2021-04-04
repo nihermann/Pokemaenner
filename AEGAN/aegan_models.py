@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import (Input, Dense, Flatten, Concatenate, Reshape, UpSampling2D, Conv2D, Activation,
                                      LeakyReLU, GaussianNoise, GaussianDropout, LayerNormalization)
 import numpy as np
-from utils import default_value
+from aegan_utils import default_value
 
 tf.keras.backend.set_floatx('float32')
 

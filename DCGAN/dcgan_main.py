@@ -29,8 +29,8 @@ if __name__ == '__main__':
     # given size of dimension in the latent space
     gan = GAN(discriminator=discriminator, generator=generator, latent_dim=LATENT_DIM)
 
-    # compile the model with Adam optimizer and the Binary Crossentropy loss function
-    gan.compile(
+    # _compile the model with Adam optimizer and the Binary Crossentropy loss function
+    gan._compile(
         d_optimizer=keras.optimizers.Adam(learning_rate=0.0001),
         g_optimizer=keras.optimizers.Adam(learning_rate=0.0001),
         loss_fn=keras.losses.BinaryCrossentropy(),

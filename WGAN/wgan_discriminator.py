@@ -16,7 +16,7 @@ def conv_block(
         drop_value=0.5,
 ):
     """function to define a convolutional block. Important parameters include
-       filters,activation function or wheter or not BatchNormaliaztion/Dropout
+       filters,activation function or whether or not BatchNormalization/Dropout
        should be used. """
     x = layers.Conv2D(
         filters, kernel_size, strides=strides, padding=padding, use_bias=use_bias
@@ -30,9 +30,9 @@ def conv_block(
 
 
 # design the model with convolutional blocks
-def get_discriminator_model(IMG_SHAPE=(64, 64, 3)):
+def get_discriminator_model(img_shape=(64, 64, 3)):
     """Discriminator model consisting of convolutional blocks"""
-    img_input = layers.Input(shape=IMG_SHAPE)
+    img_input = layers.Input(shape=img_shape)
     x = img_input
     x = conv_block(
         x,

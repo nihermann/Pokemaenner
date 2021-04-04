@@ -1,17 +1,24 @@
 from tensorflow import keras
 import tensorflow as tf
+
+
 class GAN(keras.Model):
-    '''Class to define a generative adversarial network combining both
-     discriminator and generator.'''
+    """
+    Class to define a generative adversarial network combining both
+    discriminator and generator.
+    """
+
     def __init__(self, discriminator, generator, latent_dim):
-        '''discriminator and genereator are predefines models and latent_dim
-         defines the dimension of the latent space'''
+        """
+        discriminator and generator are predefines models and latent_dim
+        defines the dimension of the latent space
+        """
         super(GAN, self).__init__()
         self.discriminator = discriminator
         self.generator = generator
         self.latent_dim = latent_dim
 
-    def compile(self, d_optimizer, g_optimizer, loss_fn):
+    def _compile(self, d_optimizer, g_optimizer, loss_fn):
         super(GAN, self).compile()
         self.d_optimizer = d_optimizer
         self.g_optimizer = g_optimizer
@@ -21,13 +28,12 @@ class GAN(keras.Model):
 
     @property
     def metrics(self):
-        '''Returns the loss metric of both discriminator and the generator'''
+        """Returns the loss metric of both discriminator and the generator"""
         return [self.d_loss_metric, self.g_loss_metric]
-
 
     # overriding the train_step
     def train_step(self, real_images):
-        '''Trains both the discriminator and the generator'''
+        """Trains both the discriminator and the generator"""
         # Sample random points in the latent space
         batch_size = tf.shape(real_images)[0]
         random_latent_vectors = tf.random.normal(shape=(batch_size, self.latent_dim))
@@ -54,8 +60,8 @@ class GAN(keras.Model):
             # get the predictions of each image from both the real and generated
             # images
             predictions = self.discriminator(combined_images)
-            # compoute the loss of the discriminator for the given loss function
-            # (vanilla is binary cross entroy) with the correct target (the labels)
+            # compute the loss of the discriminator for the given loss function
+            # (vanilla is binary cross entropy) with the correct target (the labels)
             # and the given classification of the discriminator
             d_loss = self.loss_fn(labels, predictions)
         # train the weights (trainable being the ones from the convolutional layers)
@@ -79,7 +85,7 @@ class GAN(keras.Model):
             # (whether or not the discriminator fell for the fake ones)
             predictions = self.discriminator(self.generator(random_latent_vectors))
             # compute the loss for only correct labels and the actual times the
-            # generator trickes the discriminator
+            # generator tricks the discriminator
             g_loss = self.loss_fn(misleading_labels, predictions)
         # train the weights of the transposed convolutional layers with gradient
         # tape and the given optimizer

@@ -1,24 +1,28 @@
-from wgan_loading_data import loading_data
-from wgan_generator import get_generator_model
-from wgan_discriminator import get_discriminator_model
-from wgan_WGAN import WGAN, discriminator_loss, generator_loss
-from wgan_GAN_monitor import GANMonitor
+import os
+import sys
+
 from tensorflow import keras
-import os,sys
+
+from wgan_GAN_monitor import GANMonitor
+from wgan import WGAN, discriminator_loss, generator_loss
+from wgan_discriminator import get_discriminator_model
+from wgan_generator import get_generator_model
+from wgan_loading_data import loading_data
 
 if __name__ == '__main__':
     # Hyperparameters
     IMG_SHAPE = (64, 64, 3)
     BATCH_SIZE = 16
-    EPOCHS = 2 # Set the number of epochs for training.
-    noise_dim = IMG_SHAPE[0]*2 # Size of the noise vector
-    
+    EPOCHS = 2  # Set the number of epochs for training.
+    noise_dim = IMG_SHAPE[0] * 2  # Size of the noise vector
+
     parent_path = os.path.dirname(os.getcwd())
     MODEL_PATH = "models/wgan_model"
-    IMG_PATH = os.path.join(parent_path,"preprocessing/data")
+    IMG_PATH = os.path.join(parent_path, "preprocessing/data")
     IMG_SAVE_PATH = "results/generated_img_{epoch}_{i}.png"
 
-    images,labels = loading_data(IMG_PATH, IMG_SHAPE,IMG_SAVE_PATH="data_reshaped_as_array/images", LBL_SAVE_PATH='data_reshaped_as_array/labels')
+    images, labels = loading_data(IMG_PATH, IMG_SHAPE, IMG_SAVE_PATH="data_reshaped_as_array/images",
+                                  LBL_SAVE_PATH='data_reshaped_as_array/labels')
 
     # load the discriminator model
     d_model = get_discriminator_model()
@@ -61,9 +65,9 @@ if __name__ == '__main__':
 
     # Instantiate the customer `GANMonitor` Keras callback.
     cbk = GANMonitor(num_img=10, latent_dim=noise_dim, starter_count=152,
-                     img_path= IMG_SAVE_PATH,
-                     model_path = MODEL_PATH,
-                     save_model_every = 2, model=wgan)
+                     img_path=IMG_SAVE_PATH,
+                     model_path=MODEL_PATH,
+                     save_model_every=2, model=wgan)
 
     try:
         # Start training the model.
@@ -79,7 +83,7 @@ if __name__ == '__main__':
             wgan.save_weights(MODEL_PATH, save_format='tf')
             print("saved registered")
 
-        wgan.save_weights(MODEL_PATH+"_unregistered", save_format='tf')
+        wgan.save_weights(MODEL_PATH + "_unregistered", save_format='tf')
         print("saved unregistered")
         try:
             sys.exit(0)

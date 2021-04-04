@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import os
-from utils import setup_path
+from aegan_utils import setup_path
 
 
 class DataGenerator:
