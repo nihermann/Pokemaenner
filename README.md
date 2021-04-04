@@ -1,8 +1,10 @@
 # Pokemänner
 ## Did you ever wondered how pokemon evolution look like? 
-![](https://raw.githubusercontent.com/nihermann/Pokemaenner/main/mygif.gif)
-Check out [this](https://colab.research.google.com/github/nihermann/Pokemaenner/blob/main/Interactive_results.ipynb) notebook make some yourself.
+![](https://raw.githubusercontent.com/nihermann/Pokemaenner/main/mygif.gif)  
 
+Check out [this](https://colab.research.google.com/github/nihermann/Pokemaenner/blob/main/Interactive_results.ipynb) notebook and make some yourself.
+  
+  
 ## Results Aegan
 ![](https://github.com/nihermann/Pokemaenner/blob/main/AEGAN/results/best_of_24.png)
 
