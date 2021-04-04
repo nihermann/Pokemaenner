@@ -7,10 +7,14 @@ __pycache__/
 images/
 csvs/
 pictures/
-__pycache__/
-logs/
-models/
-test.py
+__pycache__
+AEGAN/models
+AEGAN/outputs
+AEGAN/logs
+preprocessing/data64
+preprocessing/data128
+preprocessing/similar
+preprocessing/small_ds
 
 # C extensions
 *.so
