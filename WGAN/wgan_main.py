@@ -12,9 +12,10 @@ if __name__ == '__main__':
     BATCH_SIZE = 16
     EPOCHS = 2 # Set the number of epochs for training.
     noise_dim = IMG_SHAPE[0]*2 # Size of the noise vector
-
+    
+    parent_path = os.path.dirname(os.getcwd())
     MODEL_PATH = "models/wgan_model"
-    IMG_PATH = "preprocessing/data"
+    IMG_PATH = os.path.join(parent_path,"preprocessing/data")
     IMG_SAVE_PATH = "results/generated_img_{epoch}_{i}.png"
 
     images,labels = loading_data(IMG_PATH, IMG_SHAPE,IMG_SAVE_PATH="data_reshaped_as_array/images", LBL_SAVE_PATH='data_reshaped_as_array/labels')
