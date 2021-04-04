@@ -97,6 +97,23 @@ class AEGAN(tf.keras.Model):
 
         self._compile()
         print("Build successfully")
+        # self.summarize_to_file()
+
+    def summarize_to_file(self):
+        """Writes .summary and the graph structures to file."""
+        with open('generator.txt', 'w') as f:
+            self.generator.summary(print_fn=lambda x: f.write(x + '\n'))
+        with open('encoder.txt', 'w') as f:
+            self.encoder.summary(print_fn=lambda x: f.write(x + '\n'))
+        with open('discriminator_image.txt', 'w') as f:
+            self.discriminator_image.summary(print_fn=lambda x: f.write(x + '\n'))
+        with open('discriminator_latent.txt', 'w') as f:
+            self.discriminator_latent.summary(print_fn=lambda x: f.write(x + '\n'))
+
+        tf.keras.utils.plot_model(self.generator, "generator.png", show_shapes=True)
+        tf.keras.utils.plot_model(self.encoder, "encoder.png", show_shapes=True)
+        tf.keras.utils.plot_model(self.discriminator_image, "discriminator_image.png", show_shapes=True)
+        tf.keras.utils.plot_model(self.discriminator_latent, "discriminator_latent.png", show_shapes=True)
 
     def _initialize_metrics(self):
         """
@@ -121,15 +138,18 @@ class AEGAN(tf.keras.Model):
         :param only_weights: bool - If True we try to load weights, else models.
         :return: bool - stating whether the loading was successful or not.
         """
+        # extract all models/ weights from the specified path.
         files = os.listdir(path)
         files = [f for f in files if f.endswith(".h5") or f.endswith(".tf")]
+
         models_or_weights = 'Weights' if only_weights else 'Models'
         print(f"<Following{models_or_weights}Found> ::: ", end="")
 
+        # progress tracker
         num_loaded = 0
         found_g, found_e, found_l, found_i = False, False, False, False
 
-        for model in reversed(sorted(files, key=len)):
+        for model in reversed(sorted(files, key=len)):  # iterate from highest to lowest epoch
             if not found_g and "generator" in model:
                 found_g, num_loaded = True, num_loaded + 1
                 print(model, end=" ::: ")
@@ -139,6 +159,8 @@ class AEGAN(tf.keras.Model):
                 else:
                     self.generator = tf.keras.models.load_model(os.path.join(path, model), compile=False)
 
+                # extract the epoch from the model name to be able to start the training from this epoch. Makes sure
+                # that after pausing training it can be continued from there without any further actions necessary.
                 self.initial_epoch = int(re.findall(r'\d+', model)[0])
 
             elif not found_e and "encoder" in model:
@@ -158,7 +180,7 @@ class AEGAN(tf.keras.Model):
                 if only_weights:
                     self.discriminator_latent.load_weights(os.path.join(path, model))
                 else:
-                    self.discriminator_latent = tf.keras.models.load_model(os.path.join(path, model))
+                    self.discriminator_latent = tf.keras.models.load_model(os.path.join(path, model), compile=False)
                     transfer_method("forward_step", models.DiscriminatorLatent, self.discriminator_latent)
 
             elif not found_i and "discriminator_image" in model:
@@ -168,7 +190,7 @@ class AEGAN(tf.keras.Model):
                 if only_weights:
                     self.discriminator_image.load_weights(os.path.join(path, model))
                 else:
-                    self.discriminator_image = tf.keras.models.load_model(os.path.join(path, model))
+                    self.discriminator_image = tf.keras.models.load_model(os.path.join(path, model), compile=False)
                     transfer_method("forward_step", models.Encoder, self.discriminator_image)
 
         if num_loaded != 4:
@@ -189,19 +211,19 @@ class AEGAN(tf.keras.Model):
         real_img = tf.keras.layers.Input(input_image_shape, name="image_input")
         embedded_real_img = self.encoder(real_img)
 
-        prediction_real_embedding = self.discriminator_latent(embedded_real_img)
+        prediction_real_embedding = self.discriminator_latent(embedded_real_img, training=False)
         reconstructed_real_img = self.generator(embedded_real_img)
 
-        prediction_reconstructed_img = self.discriminator_image(reconstructed_real_img)
+        prediction_reconstructed_img = self.discriminator_image(reconstructed_real_img, training=False)
 
         # latent path
         real_z = tf.keras.layers.Input(input_latent_shape, name="latentspace_input")
         generated_img = self.generator(real_z)
 
-        prediction_fake_img = self.discriminator_image(generated_img)
+        prediction_fake_img = self.discriminator_image(generated_img, training=False)
         reconstructed_latent_vector = self.encoder(generated_img)
 
-        prediction_reconstructed_embedding = self.discriminator_latent(reconstructed_latent_vector)
+        prediction_reconstructed_embedding = self.discriminator_latent(reconstructed_latent_vector, training=False)
 
         return tf.keras.Model([real_img, real_z], [reconstructed_real_img,
                                                    reconstructed_latent_vector,
@@ -211,6 +233,7 @@ class AEGAN(tf.keras.Model):
                                                    prediction_reconstructed_embedding], name="AEGAN")
 
     def _compile(self):
+        """Compile all Models"""
         self.discriminator_latent.compile(
             tf.keras.optimizers.Adam(0.0005, beta_1=0.5, clipnorm=1),
             loss="binary_crossentropy"
@@ -232,8 +255,10 @@ class AEGAN(tf.keras.Model):
         )
 
     def train_step(self, real_image_batches):
+        """One forward step - called automatically from .fit()"""
         data1, data2, data3, data4, data5, data6, data7, data8 = tf.split(real_image_batches, 8, axis=0)
 
+        # Discriminator phase
         self.discriminator_latent.trainable = True
         self.discriminator_image.trainable = True
 
@@ -292,9 +317,11 @@ class AEGAN(tf.keras.Model):
 
         del data4, embedded_image, reconstructed_embedding, real_labels_d, fake_labels_d
 
+        # Generator phase
         self.discriminator_latent.trainable = False
         self.discriminator_image.trainable = False
 
+        # the labels are all "real" because we want our AEGAN to be able to fool the discriminators.
         labels_g = tf.ones((self.batch_size, 1))
         for data in [data5, data6, data7, data8]:
             latent = self.noise_generating_fn(self.batch_size)
@@ -313,17 +340,26 @@ class AEGAN(tf.keras.Model):
         return {m.name: m.result() for m in self.metrics}
 
     def autoencode_images(self, image, training=False):
+        """Autoencodes/Reconstructs an image"""
         encoding = self.encoder(image, training=training)
         return self.generator(encoding, training=training)
 
     def autoencode_latent(self, latent_vector, training=False):
+        """Autoencodes a latent vector."""
         image = self.generator(latent_vector, training=training)
         return self.encoder(image, training=training)
 
     def encode(self, image, training=False):
+        """Encodes the input image"""
         return self.encoder(image, training=training)
 
     def generate_images(self, num, training=False):
+        """
+        Generates images from the generator
+        :param num: int - how many images should be generated.
+        :param training: bool - whether the generator should be in train mode or not.
+        :return: the generated images.
+        """
         noise = self.noise_generating_fn(num)
         return self.generator(noise, training=training)
 
@@ -334,6 +370,9 @@ class AEGAN(tf.keras.Model):
         return self.aegan([data1, latent], training=training)
 
     def save_weights(self, filepath, save_format=None, **kwargs):
+        """
+        Saves all weights to file.
+        """
         self.encoder.save_weights(filepath.format("encoder"), save_format=save_format, **kwargs)
 
         self.generator.save_weights(filepath.format("generator"), save_format=save_format, **kwargs)
@@ -345,7 +384,10 @@ class AEGAN(tf.keras.Model):
                                                save_format=save_format, **kwargs)
         print("All Weights Saved!")
 
-    def save(self, filepath, include_optimizer=True, save_format=None, **kwargs):
+    def save(self, filepath, include_optimizer=False, save_format=None, **kwargs):
+        """
+        Saves all Models to file.
+        """
         self.encoder.save(filepath.format("encoder"), save_format=save_format, include_optimizer=False, **kwargs)
 
         self.generator.save(filepath.format("generator"), save_format=save_format, include_optimizer=False, **kwargs)
@@ -361,39 +403,68 @@ class AEGAN(tf.keras.Model):
 class SaveAegan(tf.keras.callbacks.Callback):
     def __init__(self, save_images_every: int, save_model_every: int, only_weights: bool, save_path: str, data_gen,
                  tensorboard_logdir=None):
+        """
+        Callback for the AEGAN to save images and the models.
+        :param save_images_every: int - after how many epochs images should be saved.
+        :param save_model_every: int - after how many epochs the models should be saved.
+        :param only_weights: bool - whether only weights or the whole model should be saved.
+        :param save_path: str - a base path where the outputs should be saved to.
+        :param data_gen: generator - returning real images for the reconstruction images.
+        :param tensorboard_logdir: str - if tensorboard is used, it is possible to write the pictures there.
+        """
         super(SaveAegan, self).__init__()
         self.epoch = 0
+        # Images
         self.save_images_every = save_images_every
+        self.static_noise = None
         self.image_save_path = setup_path(save_path, optional_join="images/")
+        self.static_image_save_path = setup_path(self.image_save_path, optional_join="static_images/")
 
+        # Models
         self.save_model_every = save_model_every
         self.only_weights = only_weights
         self.model_save_path = setup_path(save_path, optional_join="models/")
 
         self.get_test_images = lambda: data_gen.next()
 
+        # tensorboard
         self.tbw_generated_imgs = tf.summary.create_file_writer(
             tensorboard_logdir + '/generated_images') if tensorboard_logdir is not None else None
         self.tbw_reconstructed_imgs = tf.summary.create_file_writer(
             tensorboard_logdir + '/reconstructed_images') if tensorboard_logdir is not None else None
 
-    def save_images_to_grid(self, images, prefix):
+    def save_images_to_grid(self, images, prefix: str):
+        """
+        Produces a grid from the images and saves it to file.
+        :param images: tensor of images.
+        :param prefix: str - prefix when saving.
+        :return: the produced grid.
+        """
         grid = to_grid(images, border=10)
         save_images(grid, save_to=self.image_save_path, prefix=prefix)
         return grid
 
     def make_and_write_images(self, epoch, logs, suffix=""):
+        """
+        Produces and saves reconstructions and generated images to file and if specified to tensorboard.
+        :param epoch: int - the origin epoch of the logs and models.
+        :param logs: dict - from event methods. Must have key 'aegan_loss'.
+        :param suffix: str - a suffix for saving the images.
+        """
+        # get many generated images.
         imgs = self.get_test_images()
-        generated_imgs = self.model.generate_images(imgs.shape[0] * 2)
-        generated_imgs = tf.reshape(generated_imgs, (2, *imgs.shape))
+        generated_imgs = self.model.generate_images(imgs.shape[0] * 8)
+        generated_imgs = tf.reshape(generated_imgs, (2, 4*imgs.shape[0], *imgs.shape[1:]))
         gen_grid = self.save_images_to_grid(generated_imgs, f"{epoch}generated_loss{logs['aegan_loss']: .4f}{suffix}_")
 
+        # reconstruct real images and add the MAE to the filename.
         reconstructed_imgs = self.model.autoencode_images(imgs)
         reconstruction_loss = tf.keras.metrics.mean_absolute_error(imgs, reconstructed_imgs)
         reconstruction_loss = tf.reduce_mean(reconstruction_loss)
         combined = tf.stack([imgs, reconstructed_imgs], axis=0)
         rec_grid = self.save_images_to_grid(combined, f"{epoch}reconstructed_loss{reconstruction_loss: .4f}{suffix}_")
 
+        # write the images to tensorboard if specified.
         if self.tbw_reconstructed_imgs is not None:
             with self.tbw_generated_imgs.as_default():
                 tf.summary.image("Generated Images", gen_grid, step=epoch)
@@ -401,6 +472,11 @@ class SaveAegan(tf.keras.callbacks.Callback):
                 tf.summary.image("Reconstructed Images", rec_grid, step=epoch)
 
     def save_submodels(self, epoch, suffix=""):
+        """
+        Saves all sub models: encoder, generator, discriminator_image, discriminator_latent
+        :param epoch: int - the current epoch.
+        :param suffix: str - suffix for the file name.
+        """
         if self.only_weights:
             self.model.save_weights(
                 filepath=self.model_save_path + str(epoch) + "_{}" + suffix + "_w.h5",
@@ -412,8 +488,16 @@ class SaveAegan(tf.keras.callbacks.Callback):
                 save_format="h5"
             )
 
+    def on_train_begin(self, logs=None):
+        # obtain static noise when training begins. (Must be here bc the model needs to be initialized.)
+        self.static_noise = self.model.noise_generating_fn(9)
+
     def on_epoch_end(self, epoch, logs=None):
         self.epoch = epoch + 1
+
+        # produces images from a static noise vector to see how training develops.
+        static_images = self.model.generator(self.static_noise, training=False)
+        save_images(static_images, self.static_image_save_path, f"{epoch}_static_")
 
         if remainder_is_0(self.epoch, self.save_images_every):
             self.make_and_write_images(self.epoch, logs)
@@ -422,6 +506,7 @@ class SaveAegan(tf.keras.callbacks.Callback):
             self.save_submodels(self.epoch)
 
     def on_train_end(self, logs=None):
+        # if the images and models are not saved already, they will in the last epoch.
         if not remainder_is_0(self.epoch, self.save_images_every):
             self.make_and_write_images(self.epoch, logs, suffix="_F")
 
