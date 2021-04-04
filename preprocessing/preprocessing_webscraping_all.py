@@ -59,7 +59,7 @@ def download(images):
             with open(name, 'wb') as f:
                 im = requests.get(image)
                 f.write(im.content)
-            uniform(os.path.join(os.getcwd(), name), 128, 128)
+            uniform(os.path.join(os.getcwd(), name), 64, 64)
 
 
 def imagedown(url, folder):
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     # if you can see that there are wrongly sized images in your data folder (checks before resizing but still)
     for image in images:
         if "artwork" in image:
-            resize_and_save(os.path.join(os.getcwd(), "data", image), 128, 128)
+            resize_and_save(os.path.join(os.getcwd(), "data", image), 64, 64)
 
     for image in images:
         image_path = os.path.join(os.getcwd(),"data", image)

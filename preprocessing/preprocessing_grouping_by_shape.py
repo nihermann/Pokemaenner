@@ -4,61 +4,18 @@ import pandas as pd
 import re
 from PIL import Image
 
-
-def to_png():
-    current = os.getcwd()
-    image_data_path = os.path.join(current, "images")
-    # translating jpg to png
-    for folder in os.listdir(image_data_path):
-        print(folder)
-        for img_path in os.listdir(os.path.join(image_data_path, folder)):
-            try:
-                if '.jpg' in img_path:
-                    img_dir = os.path.join(image_data_path, folder, img_path)
-                    img = Image.open(img_dir)
-                    img.save(img_dir[:-3] + 'png', "PNG")
-                    os.remove(img_dir)
-                    print(f"Making {img_path} into PNG")
-                elif '.jpeg' in img_path:
-                    img_dir = os.path.join(image_data_path, folder, img_path)
-                    img = Image.open(img_dir)
-                    img.save(img_dir[:-4] + 'png', "PNG")
-                    os.remove(img_dir)
-                    print(f"Making {img_path} into PNG")
-            except:
-                print("Failed", img_dir)
-
-
-def to_RGBA():
-    # os.chdir('..')
-    current = os.getcwd()
-    image_data_path = os.path.join(current, "images")
-    # translating jpg to png
-    for folder in os.listdir(image_data_path):
-        for img_path in os.listdir(os.path.join(image_data_path, folder)):
-            try:
-                complete_path = os.path.join(image_data_path, folder, img_path)
-                if 'png' in img_path:
-                    img = Image.open(complete_path)
-                    if img.mode != "RGBA":
-                        print(f"Making {img_path} to RGBA")
-                        img2 = img.convert("RGBA")
-                        img2.save(complete_path, "PNG")
-            except:
-                print("Failed", img_path)
-
-
 def main():
     # get the paths for the images, shapes and stats data
-    path_shapes = os.path.join(os.getcwd(), "csvs", "shape_by_csv.csv")
-    path_stats = os.path.join(os.getcwd(), "csvs", "pokedex_(Update_05.20).csv")
-    path_image_data = os.path.join(os.getcwd(), "images")
+    parent_path = os.path.dirname(os.getcwd())
+    path_shapes = os.path.join(parent_path, "list_data","shape_by_csv.csv")
+    path_stats =  os.path.join(parent_path, "list_data","pokedex_(Update_05.20).csv")
+    path_image_data = os.path.join(os.getcwd(), "data_all")
 
     # read the stats, shapes data, all pokemon names and image names
     stats = pd.read_csv(path_stats)
     shapes_data = pd.read_csv(path_shapes)
     pokemon_names = shapes_data['pokemon']
-    images_names = os.listdir(os.path.join(path_image_data, "pokemaenner_images"))
+    images_names = os.listdir(os.path.join(path_image_data, "data"))
 
     # turn the stats and shapes data into translatable dictionaries
     names_to_numbers = pd.Series(stats.pokedex_number.values,
@@ -97,25 +54,26 @@ def main():
             try:
                 if pokemon.lower() in image.lower():
                     shape = names_to_shape[pokemon.lower()]
-                    shutil.move(os.path.join(path_image_data, "pokemaenner_images", image),
+                    shutil.move(os.path.join(path_image_data, "data", image),
                                 os.path.join(path_image_data,
                                              shape, image))
                     print(f"Moving {pokemon} to {shape}")
 
+                # some exceptions as the original strings have unvalid characters
                 elif 'Farfetch' in image:
-                    shutil.move(os.path.join(path_image_data, "pokemaenner_images", image),
+                    shutil.move(os.path.join(path_image_data, "data", image),
                                 os.path.join(path_image_data,
                                              'single_wings',
                                              image))
                     break
                 elif 'Sirfetch' in image:
-                    shutil.move(os.path.join(path_image_data, "pokemaenner_images", image),
+                    shutil.move(os.path.join(path_image_data, "data", image),
                                 os.path.join(path_image_data,
                                              'single_wings',
                                              image))
                     break
                 elif 'Flabébé' in image:
-                    shutil.move(os.path.join(path_image_data, "pokemaenner_images", image),
+                    shutil.move(os.path.join(path_image_data, "data", image),
                                 os.path.join(path_image_data,
                                              'head_and_arms',
                                              image))
@@ -123,30 +81,6 @@ def main():
             except:
                 print("pokemon:", image.lower(), pokemon.lower())
 
-    for image in images_names:
-        for pokedex_number in range(1000, 0, -1):
-            try:
-                if str(pokedex_number) in re.sub('\D', '', image):
-                    pokemon = numbers_to_names[pokedex_number].lower()
-                    if ' ' in pokemon:
-                        if 'mega' in pokemon or 'galarian' in pokemon or 'alolan' in pokemon or 'partner' in pokemon or 'primal' in pokemon or 'white' in pokemon:
-                            shape = names_to_shape[pokemon.split(' ', 1)[1]]
-                        else:
-                            shape = names_to_shape[pokemon.split(' ', 1)[0]]
-                    elif '150' in image:
-                        shape = "bipedal_with_tail"
-                    else:
-                        shape = names_to_shape[pokemon]
-
-                    shutil.move(os.path.join(path_image_data, "pokemaenner_images", image),
-                                os.path.join(path_image_data, shape, image))
-                    print(f"{pokedex_number} to {shape}")
-                    break
-                elif int(re.sub('\D', '', image)) > pokedex_number:
-                    break
-
-            except:
-                print(pokedex_number, image)
 
     # removes the directory where the files were
     if len(images_names) == 0:
@@ -154,4 +88,4 @@ def main():
 
 
 if __name__ == "__main__":
-    to_RGBA()
+   main()

@@ -1,4 +1,5 @@
 # Pokemänner
+![](https://raw.githubusercontent.com/nihermann/Pokemaenner/main/mygif.gif)
 ## Naming Conventions
 - for preprcessing files add preprocessing_*.py as prefix.
 - images are stored in a directory called images.

@@ -19,7 +19,7 @@ def overwrite(img, image_path, jpg_path):
 
 
 # uniform mode and size
-def resize_and_convert(image_path, image_width=128, image_height=128):
+def resize_and_convert(image_path, image_width = 64, image_height = 64):
     img = Image.open(image_path)
 
     if img.mode != "RGB":
@@ -36,7 +36,7 @@ def resize_and_convert(image_path, image_width=128, image_height=128):
         img.save(image_path, 'PNG')  # save the new image
 
 
-def resize_and_save(image_path=None, image_width=128, image_height=128):
+def resize_and_save(image_path = None, image_width = 64, image_height = 64):
     img = Image.open(image_path)
 
     if img.size != (image_height, image_width):
@@ -44,8 +44,7 @@ def resize_and_save(image_path=None, image_width=128, image_height=128):
         os.remove(image_path)  # remove the original image
         img.save(image_path, 'PNG')  # save the new image
 
-
-def resize(img=None, image_path=None, image_width=128, image_height=128):
+def resize(img = None,image_path = None, image_width = 64, image_height = 64):
     if img is None:
         img = Image.open(image_path)
     if img.size != (image_height, image_width):
