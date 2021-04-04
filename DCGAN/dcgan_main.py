@@ -3,12 +3,13 @@ from dcgan_GAN import GAN
 from dcgan_models import load_models
 import tensorflow as tf
 from tensorflow import keras
+import os
 
 if __name__ == '__main__':
-    
+
     parent_path = os.path.dirname(os.getcwd())
     MODEL_PATH = "models/dcgan_model"
-    IMG_PATH = os.path.join(parent_path,"preprocessing","data")
+    IMG_PATH = os.path.join(parent_path, "preprocessing", "data")
     IMG_SAVE_PATH = "results/generated_img_{epoch}_{i}.png"
 
     # Hyperparamters
@@ -29,7 +30,7 @@ if __name__ == '__main__':
     # given size of dimension in the latent space
     gan = GAN(discriminator=discriminator, generator=generator, latent_dim=LATENT_DIM)
 
-    # _compile the model with Adam optimizer and the Binary Crossentropy loss function
+    # _compile the model with Adam optimizer and the Binary Cross-entropy loss function
     gan._compile(
         d_optimizer=keras.optimizers.Adam(learning_rate=0.0001),
         g_optimizer=keras.optimizers.Adam(learning_rate=0.0001),
