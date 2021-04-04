@@ -24,35 +24,33 @@ from data import DataGenerator
 from aegan import (AEGAN, SaveAegan)
 
 # @title # Model
-model = None
 # @markdown ## AEGAN
-use_aegan = True  # @param {type:"boolean"}
-if use_aegan:
-    image_shape = (64, 64, 3)  # @param
-    latentspace = 24  # @param {type:"integer"}
-    batch_size = 32  # @param {type:"integer"}
-    noise_generating_function = lambda b: tf.random.normal((b, latentspace))  # @param {type:"raw"}
-    continue_from_saved_models = True  # @param {type:"boolean"}
-    only_weights = True  # @param {type:"boolean"}
-    path = "./outputs/models"  # @param ["./models"] {allow-input: true}
 
-    batch_size *= 8
+image_shape = (64, 64, 3)  # @param
+latentspace = 70  # @param {type:"integer"}
+batch_size = 32  # @param {type:"integer"}
+noise_generating_function = lambda b: tf.random.normal((b, latentspace))  # @param {type:"raw"}
+continue_from_saved_models = False  # @param {type:"boolean"}
+only_weights = True  # @param {type:"boolean"}
+path = "./outputs/models"  # @param ["./models"] {allow-input: true}
 
-    model = AEGAN(
-        image_shape=image_shape,
-        latentspace=latentspace,
-        batch_size=batch_size,
-        noise_generating_fn=noise_generating_function,
-        continue_from_saved_models=continue_from_saved_models,
-        only_weights=only_weights,
-        path=path
-    )
+batch_size *= 8
+
+model = AEGAN(
+    image_shape=image_shape,
+    latentspace=latentspace,
+    batch_size=batch_size,
+    noise_generating_fn=noise_generating_function,
+    continue_from_saved_models=continue_from_saved_models,
+    only_weights=only_weights,
+    path=path
+)
 
 # @title ## Data Settings
 
 image_path = "./preprocessing/data64/"  # @param {type:"string"}
 images_in_test_split = 20  # @param {type:"slider", min:4, max:20, step:4}
-horizontal_flip = False  # @param {type:"boolean"}
+horizontal_flip = True  # @param {type:"boolean"}
 shuffle = True  # @param {type:"boolean"}
 
 data = DataGenerator(
@@ -71,18 +69,7 @@ print_verbose = "progressbar"  # @param ["no_prints", "print_after_each_epoch", 
 print_verbose = {"no_prints": 0, "print_after_each_epoch": 2, "progressbar": 1}[print_verbose]
 
 # @markdown ## Callbacks
-# @markdown ### Model saving
 callbacks = []
-# save_models = False  # @param {type:"boolean"}
-# if save_models:
-#     model_path = "./outputs/models/aegan{epoch:03d}.h5"  # @param ["./outputs/models/"] {allow-input: true}
-#
-#     callbacks.append(
-#         tf.keras.callbacks.ModelCheckpoint(
-#             filepath=model_path,
-#             save_weights_only=save_weights_only,
-#         )
-#     )
 
 # @markdown ### Tensorboard
 use_tensorboard = False  # @param {type:"boolean"}
@@ -102,7 +89,6 @@ if use_tensorboard:
             update_freq=update_frequency
         )
     )
-
 
     def launchTensorBoard():
         import os
@@ -138,7 +124,7 @@ if save_aegan:
 
 # @markdown ### Save History to csv
 # @markdown The name will be generated automatically so you only need to specify the path where it should be saved.
-save_history = True  # @param {type:"boolean}
+save_history = True  # @param {type:"boolean"}
 if save_history:
     history_path = "./outputs/history"  # @param ["./outputs/history"] {allow-input: true}
     history_path = utils.setup_path(history_path)
@@ -149,8 +135,6 @@ if save_history:
         )
     )
 
-assert model is not None, "Model must not be None, please make sure to enable one of them by setting the respective " \
-                          "bool to True!"
 print("Start training..")
 model.fit(
     x=data.training_generator,
