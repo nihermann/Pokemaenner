@@ -39,7 +39,7 @@ def overwrite(img, image_path, jpg_path):
 
 
 # uniform mode and size
-def resize_and_convert(image_path, image_width = 128, image_height = 128):
+def resize_and_convert(image_path, image_width = 64, image_height = 64):
     img = Image.open(image_path)
 
     if img.mode != "RGB":
@@ -56,7 +56,7 @@ def resize_and_convert(image_path, image_width = 128, image_height = 128):
         img.save(image_path, 'PNG') #save the new image
 
 
-def resize_and_save(image_path = None, image_width = 128, image_height = 128):
+def resize_and_save(image_path = None, image_width = 64, image_height = 64):
     try:
         img = Image.open(image_path)
 
@@ -67,7 +67,7 @@ def resize_and_save(image_path = None, image_width = 128, image_height = 128):
     except:
         pass
 
-def resize(img = None,image_path = None, image_width = 128, image_height = 128):
+def resize(img = None,image_path = None, image_width = 64, image_height = 64):
     if img == None:
         img = Image.open(image_path)
     if img.size != (image_height,image_width):
@@ -182,7 +182,7 @@ def center_focus(image_path,tol=255, border = 4):
     # only resize and save if it doesn't destroy the original image
     img1 = resize(img1,image_path)
 
-    if np.sum(convert_pil_to_cv(img1) == (255, 255, 255)) > (128*128*3)-2000:
+    if np.sum(convert_pil_to_cv(img1) == (255, 255, 255)) > (64*64*3)-2000:
         print(f"{path_leaf(image_path)} would have been destroyed")
         resize_and_save(convert_cv_to_pil(img),image_path)
     else:
@@ -192,7 +192,7 @@ def path_leaf(path):
     head, tail = ntpath.split(path)
     return tail or ntpath.basename(head)
 
-def uniform(image_path, image_height = 128, image_width=128):
+def uniform(image_path, image_height = 64, image_width=64):
     try:
         # uniform the filetype
         make_png(image_path)
