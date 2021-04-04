@@ -7,7 +7,7 @@ from utils import setup_path
 class DataGenerator:
     def __init__(self, img_path="images", batch_size=32, img_size=(64, 64), images_in_validation_split=0, horizontal_flip=True, shuffle=False):
         """
-
+        Container class for a training generator and a validation generator for images.
         :param img_path: name of the image folder (image folder has to be in the same folder as the excecuting class file)
         :param batch_size: int
         :param img_size: tuple - (height, width) of the images.
