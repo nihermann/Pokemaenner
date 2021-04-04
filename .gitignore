@@ -8,7 +8,6 @@ images/
 csvs/
 pictures/
 __pycache__
-AEGAN/models
 AEGAN/outputs
 AEGAN/logs
 preprocessing/data64
