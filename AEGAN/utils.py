@@ -142,7 +142,7 @@ if __name__ == "__main__":
     # print("done")
     from data import DataGenerator
 
-    data = DataGenerator("./preprocessing/data128/", images_in_test_split=20)
+    data = DataGenerator("./preprocessing/data128/", images_in_validation_split=20)
     d = data.validation_generator.next()
     d = to_grid(tf.stack([d, d], 0), 20)
     save_images(d, "./test/")

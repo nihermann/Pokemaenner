@@ -48,7 +48,7 @@ model = AEGAN(
 
 # @title ## Data Settings
 
-image_path = "./preprocessing/data64/"  # @param {type:"string"}
+image_path = "../../preprocessing/data64/"  # @param {type:"string"}
 images_in_test_split = 20  # @param {type:"slider", min:4, max:20, step:4}
 horizontal_flip = True  # @param {type:"boolean"}
 shuffle = True  # @param {type:"boolean"}
@@ -57,7 +57,7 @@ data = DataGenerator(
     img_path=image_path,
     batch_size=batch_size,
     img_size=image_shape[:2],
-    images_in_test_split=images_in_test_split,
+    images_in_validation_split=images_in_test_split,
     horizontal_flip=horizontal_flip,
     shuffle=shuffle
 )
