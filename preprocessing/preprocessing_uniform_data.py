@@ -178,7 +178,7 @@ def path_leaf(path):
     return tail or ntpath.basename(head)
 
 
-def uniform(image_path, image_height=128, image_width=128):
+def uniform(image_path, image_height=64, image_width=64):
     # uniform the filetype
     make_png(image_path)
     try:
