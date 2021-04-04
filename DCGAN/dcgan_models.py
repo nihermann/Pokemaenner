@@ -2,7 +2,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 
 
-def load_models(IMG_SHAPE=(64, 64, 3), latent_dim=128):
+def load_models(img_shape=(64, 64, 3), latent_dim=128):
     """Load Sequential models for discriminator and generator"""
     # discriminator
     discriminator = keras.Sequential(
