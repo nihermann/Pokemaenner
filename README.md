@@ -19,6 +19,3 @@ This Project was done as a final paper in the course "Implementing Artificial Ne
 - images are stored in a directory called images.
 - all csvs in a directory called list_data
 - in general use short names but no abbreviations.
-
-
-P.S The only things changed after the deadline was to add the sample results and visualize it in the README for the WGAN
